@@ -1,4 +1,3 @@
-import * as crypto from 'crypto';
 import { env } from '@config/env';
 import { logger, loggers } from '@utils/logger';
 import {
@@ -18,7 +17,7 @@ import type {
   AuthResult,
   AuthTokens,
   PublicUser,
-} from '@types/auth.types';
+} from '@typings/auth.types';
 
 const GENERIC_AUTH_ERROR = 'Invalid email or password';
 const LOCKOUT_ERROR = 'Account temporarily locked due to too many failed login attempts';

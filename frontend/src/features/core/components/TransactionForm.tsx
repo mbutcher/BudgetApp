@@ -9,7 +9,7 @@ import type { Transaction } from '../types';
 
 const transactionSchema = z.object({
   accountId: z.string().uuid('Select an account'),
-  amount: z.number().not([0]),
+  amount: z.number().refine((n) => n !== 0, { message: 'Amount cannot be zero' }),
   description: z.string().max(1000).optional(),
   payee: z.string().max(512).optional(),
   notes: z.string().max(5000).optional(),

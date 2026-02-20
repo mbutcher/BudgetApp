@@ -5,7 +5,7 @@ import type {
   CreateBudgetData,
   UpdateBudgetData,
   BudgetCategoryEntry,
-} from '@types/core.types';
+} from '@typings/core.types';
 
 class BudgetController {
   list = asyncHandler(async (req: Request, res: Response) => {

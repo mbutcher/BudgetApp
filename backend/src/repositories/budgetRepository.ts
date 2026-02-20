@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { getDatabase } from '@config/database';
 import type {
   Budget,
@@ -6,7 +7,7 @@ import type {
   BudgetCategoryProgress,
   CreateBudgetData,
   UpdateBudgetData,
-} from '@types/core.types';
+} from '@typings/core.types';
 
 function rowToBudget(row: Record<string, unknown>): Budget {
   return {
@@ -50,14 +51,16 @@ class BudgetRepository {
   }
 
   async create(data: CreateBudgetData): Promise<Budget> {
-    const [id] = await this.db('budgets').insert({
+    const id = randomUUID();
+    await this.db('budgets').insert({
+      id,
       user_id: data.userId,
       name: data.name,
       start_date: data.startDate,
       end_date: data.endDate,
     });
     const row = await this.db('budgets').where({ id }).first();
-    return rowToBudget(row);
+    return rowToBudget(row as Record<string, unknown>);
   }
 
   async update(id: string, userId: string, data: UpdateBudgetData): Promise<Budget | null> {
@@ -111,19 +114,14 @@ class BudgetRepository {
     if (!budget) return [];
 
     const db = this.db;
-    const startDate = budget.startDate.toISOString().split('T')[0];
-    const endDate = budget.endDate.toISOString().split('T')[0];
+    const startDate = budget.startDate.toISOString().substring(0, 10);
+    const endDate = budget.endDate.toISOString().substring(0, 10);
 
+    // Correlated subquery for spending avoids Knex JOIN-ON raw filter typing issues
+    // and correctly returns 0 for categories with no matching transactions.
     const rows = await db('budget_categories as bc')
       .join('categories as c', 'bc.category_id', 'c.id')
-      .leftJoin('transactions as t', function () {
-        this.on('t.category_id', 'bc.category_id')
-          .andOnRaw('t.user_id = ?', [userId])
-          .andOnRaw('t.is_transfer = 0')
-          .andOnRaw('t.date BETWEEN ? AND ?', [startDate, endDate]);
-      })
       .where('bc.budget_id', budgetId)
-      .groupBy('bc.id', 'bc.category_id', 'bc.allocated_amount', 'c.id', 'c.name', 'c.color', 'c.icon', 'c.is_income', 'c.parent_id', 'c.is_active', 'c.user_id', 'c.created_at', 'c.updated_at')
       .select(
         'bc.category_id',
         'bc.allocated_amount',
@@ -137,7 +135,18 @@ class BudgetRepository {
         'c.is_active as c_is_active',
         'c.created_at as c_created_at',
         'c.updated_at as c_updated_at',
-        db.raw('COALESCE(SUM(CASE WHEN t.amount < 0 THEN ABS(t.amount) ELSE 0 END), 0) as spent')
+        db.raw(
+          `COALESCE((
+            SELECT SUM(ABS(t.amount))
+            FROM transactions t
+            WHERE t.category_id = bc.category_id
+              AND t.user_id = ?
+              AND t.is_transfer = 0
+              AND t.amount < 0
+              AND t.date BETWEEN ? AND ?
+          ), 0) as spent`,
+          [userId, startDate, endDate]
+        )
       );
 
     return rows.map((row: Record<string, unknown>) => {

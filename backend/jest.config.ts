@@ -34,7 +34,7 @@ const config: Config = {
     '^@routes/(.*)$': '<rootDir>/src/routes/$1',
     '^@repositories/(.*)$': '<rootDir>/src/repositories/$1',
     '^@validators/(.*)$': '<rootDir>/src/validators/$1',
-    '^@types/(.*)$': '<rootDir>/src/types/$1',
+    '^@typings/(.*)$': '<rootDir>/src/types/$1',
     '^@utils/(.*)$': '<rootDir>/src/utils/$1',
   },
   setupFilesAfterEnv: [],

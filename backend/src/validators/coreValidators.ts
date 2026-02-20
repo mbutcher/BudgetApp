@@ -89,7 +89,6 @@ export const transactionFiltersSchema = Joi.object({
   categoryId: Joi.string().uuid(),
   startDate: Joi.string().pattern(ISO_DATE),
   endDate: Joi.string().pattern(ISO_DATE),
-  search: Joi.string().max(255),
   isTransfer: Joi.boolean(),
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(50),
@@ -102,6 +101,60 @@ export const linkTransactionSchema = Joi.object({
   }),
   linkType: Joi.string().valid('transfer', 'payment', 'refund').default('transfer'),
 });
+
+// ─── Debt Schedule Validators ─────────────────────────────────────────────────
+
+export const upsertDebtScheduleSchema = Joi.object({
+  principal: Joi.number().positive().precision(2).required().messages({
+    'any.required': 'principal is required',
+    'number.positive': 'principal must be a positive number',
+  }),
+  annualRate: Joi.number().min(0).max(1).required().messages({
+    'any.required': 'annualRate is required',
+    'number.max': 'annualRate must be a decimal fraction (e.g. 0.065 for 6.5%)',
+  }),
+  termMonths: Joi.number().integer().min(1).max(600).required().messages({
+    'any.required': 'termMonths is required',
+    'number.max': 'termMonths cannot exceed 600',
+  }),
+  originationDate: Joi.string().pattern(ISO_DATE).required().messages({
+    'any.required': 'originationDate is required',
+    'string.pattern.base': 'originationDate must be in YYYY-MM-DD format',
+  }),
+  paymentAmount: Joi.number().positive().precision(2).required().messages({
+    'any.required': 'paymentAmount is required',
+  }),
+});
+
+export const whatIfQuerySchema = Joi.object({
+  extraMonthly: Joi.number().positive().precision(2).required().messages({
+    'any.required': 'extraMonthly query param is required',
+    'number.positive': 'extraMonthly must be a positive number',
+  }),
+});
+
+// ─── Savings Goal Validators ──────────────────────────────────────────────────
+
+export const createSavingsGoalSchema = Joi.object({
+  accountId: Joi.string().uuid().required().messages({
+    'any.required': 'accountId is required',
+    'string.guid': 'accountId must be a valid UUID',
+  }),
+  name: Joi.string().max(255).required().messages({
+    'any.required': 'name is required',
+  }),
+  targetAmount: Joi.number().positive().precision(2).required().messages({
+    'any.required': 'targetAmount is required',
+    'number.positive': 'targetAmount must be a positive number',
+  }),
+  targetDate: Joi.string().pattern(ISO_DATE).optional().allow(null),
+});
+
+export const updateSavingsGoalSchema = Joi.object({
+  name: Joi.string().max(255),
+  targetAmount: Joi.number().positive().precision(2),
+  targetDate: Joi.string().pattern(ISO_DATE).allow(null),
+}).min(1);
 
 // ─── Budget Validators ────────────────────────────────────────────────────────
 

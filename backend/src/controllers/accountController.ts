@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { asyncHandler } from '@middleware/errorHandler';
 import { accountService } from '@services/core/accountService';
-import type { CreateAccountData, UpdateAccountData } from '@types/core.types';
+import type { CreateAccountData, UpdateAccountData } from '@typings/core.types';
 
 class AccountController {
   list = asyncHandler(async (req: Request, res: Response) => {

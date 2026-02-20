@@ -1,5 +1,5 @@
 import { getDatabase } from '@config/database';
-import type { Passkey, CreatePasskeyData } from '@types/auth.types';
+import type { Passkey, CreatePasskeyData } from '@typings/auth.types';
 
 function rowToPasskey(row: Record<string, unknown>): Passkey {
   let transports: string[] | null = null;

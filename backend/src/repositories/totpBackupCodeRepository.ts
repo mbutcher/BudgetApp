@@ -1,5 +1,5 @@
 import { getDatabase } from '@config/database';
-import type { TotpBackupCode } from '@types/auth.types';
+import type { TotpBackupCode } from '@typings/auth.types';
 
 function rowToBackupCode(row: Record<string, unknown>): TotpBackupCode {
   return {

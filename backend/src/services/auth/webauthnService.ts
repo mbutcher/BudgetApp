@@ -15,7 +15,7 @@ import { loggers } from '@utils/logger';
 import { UnauthorizedError, ConflictError } from '@middleware/errorHandler';
 import { userRepository } from '@repositories/userRepository';
 import { passkeyRepository } from '@repositories/passkeyRepository';
-import type { Passkey } from '@types/auth.types';
+import type { Passkey } from '@typings/auth.types';
 
 const CHALLENGE_TTL_SECONDS = 300; // 5 minutes
 const CHALLENGE_KEY_PREFIX = 'webauthn:challenge:';
@@ -110,18 +110,18 @@ class WebAuthnService {
       throw new UnauthorizedError('Passkey registration verification failed');
     }
 
-    const { credential, aaguid } = verification.registrationInfo;
+    const { credentialID, credentialPublicKey, counter, aaguid } = verification.registrationInfo;
 
     // Check if this credential is already registered (to another account)
-    if (await passkeyRepository.existsByCredentialId(credential.id)) {
+    if (await passkeyRepository.existsByCredentialId(credentialID)) {
       throw new ConflictError('This passkey is already registered');
     }
 
     const passkey = await passkeyRepository.create({
       userId,
-      credentialId: credential.id,
-      publicKey: Buffer.from(credential.publicKey).toString('base64url'),
-      counter: credential.counter,
+      credentialId: credentialID,
+      publicKey: Buffer.from(credentialPublicKey).toString('base64url'),
+      counter,
       aaguid: aaguid ?? null,
       deviceName: deviceName ?? null,
       transports: (response.response.transports ?? []) as string[],
@@ -199,9 +199,9 @@ class WebAuthnService {
       expectedChallenge,
       expectedOrigin: this.origin,
       expectedRPID: this.rpId,
-      credential: {
-        id: passkey.credentialId,
-        publicKey: publicKeyBuffer,
+      authenticator: {
+        credentialID: passkey.credentialId,
+        credentialPublicKey: publicKeyBuffer,
         counter: passkey.counter,
         transports: (passkey.transports ?? []) as AuthenticatorTransportFuture[],
       },

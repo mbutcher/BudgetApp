@@ -8,7 +8,6 @@ import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import { FormField } from '@components/ui/form-field';
 import { Alert, AlertDescription } from '@components/ui/alert';
-import { Badge } from '@components/ui/badge';
 import { getApiErrorMessage } from '@lib/api/errors';
 
 

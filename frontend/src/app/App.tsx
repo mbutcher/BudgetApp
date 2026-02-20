@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@features/auth/hooks/useAuth';
 import { ProtectedRoute } from '@features/auth/components/ProtectedRoute';
+import { AppLayout } from '@components/layout/AppLayout';
 import { LoginPage } from '@features/auth/pages/LoginPage';
 import { TwoFactorPage } from '@features/auth/pages/TwoFactorPage';
 import { RegisterPage } from '@features/auth/pages/RegisterPage';
@@ -10,6 +11,8 @@ import { AccountsPage } from '@features/core/pages/AccountsPage';
 import { TransactionsPage } from '@features/core/pages/TransactionsPage';
 import { BudgetListPage } from '@features/core/pages/BudgetListPage';
 import { BudgetDetailPage } from '@features/core/pages/BudgetDetailPage';
+import { DebtDetailPage } from '@features/core/pages/DebtDetailPage';
+import { SavingsGoalsPage } from '@features/core/pages/SavingsGoalsPage';
 
 /**
  * AuthInitializer calls GET /auth/me on mount to restore session from
@@ -30,55 +33,23 @@ function App() {
         <Route path="/login/two-factor" element={<TwoFactorPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-        {/* Protected routes */}
+        {/* Protected layout route — all children share AppLayout sidebar */}
         <Route
-          path="/dashboard"
           element={
             <ProtectedRoute>
-              <DashboardPage />
+              <AppLayout />
             </ProtectedRoute>
           }
-        />
-        <Route
-          path="/accounts"
-          element={
-            <ProtectedRoute>
-              <AccountsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/transactions"
-          element={
-            <ProtectedRoute>
-              <TransactionsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/budgets"
-          element={
-            <ProtectedRoute>
-              <BudgetListPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/budgets/:id"
-          element={
-            <ProtectedRoute>
-              <BudgetDetailPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/settings/security"
-          element={
-            <ProtectedRoute>
-              <SecuritySettingsPage />
-            </ProtectedRoute>
-          }
-        />
+        >
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/accounts" element={<AccountsPage />} />
+          <Route path="/transactions" element={<TransactionsPage />} />
+          <Route path="/budgets" element={<BudgetListPage />} />
+          <Route path="/budgets/:id" element={<BudgetDetailPage />} />
+          <Route path="/accounts/:accountId/debt" element={<DebtDetailPage />} />
+          <Route path="/savings-goals" element={<SavingsGoalsPage />} />
+          <Route path="/settings/security" element={<SecuritySettingsPage />} />
+        </Route>
 
         {/* Default redirect */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

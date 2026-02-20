@@ -1,22 +1,23 @@
 import * as jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
+import type { StringValue } from 'ms';
 import { env } from '@config/env';
 import { UnauthorizedError } from '@middleware/errorHandler';
 import type {
   AccessTokenPayload,
   TwoFactorTokenPayload,
-} from '@types/auth.types';
+} from '@typings/auth.types';
 
 class TokenService {
   private readonly secret: string;
-  private readonly accessExpiry: string;
-  private readonly refreshExpiry: string;
-  private readonly twoFactorExpiry = '5m';
+  private readonly accessExpiry: StringValue;
+  private readonly refreshExpiry: StringValue;
+  private readonly twoFactorExpiry: StringValue = '5m';
 
   constructor() {
     this.secret = env.jwt.secret;
-    this.accessExpiry = env.jwt.expiry; // '15m'
-    this.refreshExpiry = env.jwt.refreshExpiry; // '30d'
+    this.accessExpiry = env.jwt.expiry as StringValue; // '15m'
+    this.refreshExpiry = env.jwt.refreshExpiry as StringValue; // '30d'
   }
 
   /** Sign a short-lived access token (15 min). Type: 'access'. */

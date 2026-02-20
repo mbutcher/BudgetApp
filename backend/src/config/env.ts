@@ -29,91 +29,94 @@ const requiredEnvVars = [
   'DB_USER',
 ];
 
+// Bracket notation required by noPropertyAccessFromIndexSignature
+const e = process.env;
+
 // Environment variable configuration
 export const env = {
   // Application
-  nodeEnv: process.env.NODE_ENV || 'development',
-  appPort: parseInt(process.env.APP_PORT || '3001', 10),
-  appUrl: process.env.APP_URL || 'http://localhost:3000',
+  nodeEnv: e['NODE_ENV'] ?? 'development',
+  appPort: parseInt(e['APP_PORT'] ?? '3001', 10),
+  appUrl: e['APP_URL'] ?? 'http://localhost:3000',
 
   // Database
   db: {
-    host: process.env.DB_HOST!,
-    port: parseInt(process.env.DB_PORT || '3306', 10),
-    database: process.env.DB_NAME!,
-    user: process.env.DB_USER!,
-    password: readSecret('db_password.txt') || process.env.DB_PASSWORD || '',
+    host: e['DB_HOST'] ?? '',
+    port: parseInt(e['DB_PORT'] ?? '3306', 10),
+    database: e['DB_NAME'] ?? '',
+    user: e['DB_USER'] ?? '',
+    password: readSecret('db_password.txt') ?? e['DB_PASSWORD'] ?? '',
   },
 
   // Redis
   redis: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379', 10),
-    password: readSecret('redis_password.txt') || process.env.REDIS_PASSWORD,
+    host: e['REDIS_HOST'] ?? 'localhost',
+    port: parseInt(e['REDIS_PORT'] ?? '6379', 10),
+    password: readSecret('redis_password.txt') ?? e['REDIS_PASSWORD'],
   },
 
   // JWT
   jwt: {
-    secret: readSecret('jwt_secret.txt') || process.env.JWT_SECRET || '',
-    expiry: process.env.JWT_EXPIRY || '15m',
-    refreshExpiry: process.env.JWT_REFRESH_EXPIRY || '30d',
+    secret: readSecret('jwt_secret.txt') ?? e['JWT_SECRET'] ?? '',
+    expiry: e['JWT_EXPIRY'] ?? '15m',
+    refreshExpiry: e['JWT_REFRESH_EXPIRY'] ?? '30d',
   },
 
   // Encryption
   encryption: {
-    masterKey: readSecret('encryption_key.txt') || process.env.ENCRYPTION_KEY || '',
-    algorithm: process.env.ENCRYPTION_ALGORITHM || 'aes-256-gcm',
+    masterKey: readSecret('encryption_key.txt') ?? e['ENCRYPTION_KEY'] ?? '',
+    algorithm: e['ENCRYPTION_ALGORITHM'] ?? 'aes-256-gcm',
   },
 
   // Password
   password: {
-    pepper: readSecret('password_pepper.txt') || process.env.PASSWORD_PEPPER || '',
-    bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),
+    pepper: readSecret('password_pepper.txt') ?? e['PASSWORD_PEPPER'] ?? '',
+    bcryptRounds: parseInt(e['BCRYPT_ROUNDS'] ?? '12', 10),
   },
 
   // Security
   security: {
-    sessionTimeout: parseInt(process.env.SESSION_TIMEOUT || '3600', 10),
-    maxLoginAttempts: parseInt(process.env.MAX_LOGIN_ATTEMPTS || '5', 10),
-    lockoutDuration: parseInt(process.env.LOCKOUT_DURATION || '900', 10),
+    sessionTimeout: parseInt(e['SESSION_TIMEOUT'] ?? '3600', 10),
+    maxLoginAttempts: parseInt(e['MAX_LOGIN_ATTEMPTS'] ?? '5', 10),
+    lockoutDuration: parseInt(e['LOCKOUT_DURATION'] ?? '900', 10),
   },
 
   // CORS
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: e['CORS_ORIGIN'] ?? 'http://localhost:3000',
   },
 
   // Logging
   logging: {
-    level: process.env.LOG_LEVEL || 'info',
-    dir: process.env.LOG_DIR || './logs',
+    level: e['LOG_LEVEL'] ?? 'info',
+    dir: e['LOG_DIR'] ?? './logs',
   },
 
   // Rate Limiting
   rateLimit: {
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
-    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
-    loginMaxRequests: parseInt(process.env.LOGIN_RATE_LIMIT_MAX || '5', 10),
-    loginWindowMs: parseInt(process.env.LOGIN_RATE_LIMIT_WINDOW_MS || '900000', 10),
+    windowMs: parseInt(e['RATE_LIMIT_WINDOW_MS'] ?? '900000', 10),
+    maxRequests: parseInt(e['RATE_LIMIT_MAX_REQUESTS'] ?? '100', 10),
+    loginMaxRequests: parseInt(e['LOGIN_RATE_LIMIT_MAX'] ?? '5', 10),
+    loginWindowMs: parseInt(e['LOGIN_RATE_LIMIT_WINDOW_MS'] ?? '900000', 10),
   },
 
   // File Upload
   upload: {
-    maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '10485760', 10), // 10MB
-    uploadDir: process.env.UPLOAD_DIR || './uploads',
+    maxFileSize: parseInt(e['MAX_FILE_SIZE'] ?? '10485760', 10), // 10MB
+    uploadDir: e['UPLOAD_DIR'] ?? './uploads',
   },
 
   // WebAuthn
   webauthn: {
-    rpName: process.env.WEBAUTHN_RP_NAME || 'Budget App',
-    rpId: process.env.WEBAUTHN_RP_ID || 'localhost',
-    origin: process.env.WEBAUTHN_ORIGIN || 'http://localhost:3000',
+    rpName: e['WEBAUTHN_RP_NAME'] ?? 'Budget App',
+    rpId: e['WEBAUTHN_RP_ID'] ?? 'localhost',
+    origin: e['WEBAUTHN_ORIGIN'] ?? 'http://localhost:3000',
   },
 
   // Feature Flags
-  isDevelopment: process.env.NODE_ENV === 'development',
-  isProduction: process.env.NODE_ENV === 'production',
-  isTest: process.env.NODE_ENV === 'test',
+  isDevelopment: e['NODE_ENV'] === 'development',
+  isProduction: e['NODE_ENV'] === 'production',
+  isTest: e['NODE_ENV'] === 'test',
 };
 
 // Validate required environment variables
@@ -121,7 +124,7 @@ export function validateEnv(): void {
   const missing: string[] = [];
 
   requiredEnvVars.forEach((varName) => {
-    if (!process.env[varName]) {
+    if (!e[varName]) {
       missing.push(varName);
     }
   });
@@ -149,10 +152,10 @@ export function validateEnv(): void {
   // Warn about missing optional but recommended variables
   if (env.isProduction) {
     if (!env.password.pepper) {
-      console.warn('⚠️  Warning: PASSWORD_PEPPER not set. Passwords will be less secure.');
+      console.warn('Warning: PASSWORD_PEPPER not set. Passwords will be less secure.');
     }
     if (!env.redis.password) {
-      console.warn('⚠️  Warning: REDIS_PASSWORD not set. Redis is not password-protected.');
+      console.warn('Warning: REDIS_PASSWORD not set. Redis is not password-protected.');
     }
   }
 }

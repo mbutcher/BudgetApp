@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useAccounts } from '../hooks/useAccounts';
 import { useCategories } from '../hooks/useCategories';
-import { useCreateTransaction } from '../hooks/useTransactions';
 import { TransactionList } from '../components/TransactionList';
 import { TransactionForm } from '../components/TransactionForm';
 import { TransferLinkingDialog } from '../components/TransferLinkingDialog';

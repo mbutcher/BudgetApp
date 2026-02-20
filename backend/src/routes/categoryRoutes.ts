@@ -10,6 +10,7 @@ router.use(authenticate);
 
 router.get('/', categoryController.list);
 router.post('/', validateRequest(createCategorySchema), categoryController.create);
+router.get('/:id', categoryController.getById);
 router.patch('/:id', validateRequest(updateCategorySchema), categoryController.update);
 router.delete('/:id', categoryController.archive);
 

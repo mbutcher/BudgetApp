@@ -20,11 +20,11 @@ const config: { [key: string]: Knex.Config } = {
   development: {
     client: 'mysql2',
     connection: {
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '3306', 10),
-      database: process.env.DB_NAME || 'budget_app',
-      user: process.env.DB_USER || 'budget_user',
-      password: process.env.DB_PASSWORD || 'dev_pass',
+      host: process.env['DB_HOST'] || 'localhost',
+      port: parseInt(process.env['DB_PORT'] || '3306', 10),
+      database: process.env['DB_NAME'] || 'budget_app',
+      user: process.env['DB_USER'] || 'budget_user',
+      password: process.env['DB_PASSWORD'] || 'dev_pass',
       charset: 'utf8mb4',
     },
     pool: {
@@ -45,11 +45,11 @@ const config: { [key: string]: Knex.Config } = {
   production: {
     client: 'mysql2',
     connection: {
-      host: process.env.DB_HOST || 'mariadb',
-      port: parseInt(process.env.DB_PORT || '3306', 10),
-      database: process.env.DB_NAME || 'budget_app',
-      user: process.env.DB_USER || 'budget_user',
-      password: readSecret('db_password.txt') || process.env.DB_PASSWORD,
+      host: process.env['DB_HOST'] || 'mariadb',
+      port: parseInt(process.env['DB_PORT'] || '3306', 10),
+      database: process.env['DB_NAME'] || 'budget_app',
+      user: process.env['DB_USER'] || 'budget_user',
+      password: readSecret('db_password.txt') || process.env['DB_PASSWORD'],
       charset: 'utf8mb4',
       ssl: false, // Set to true if using SSL connection
     },

@@ -1,5 +1,5 @@
 import { getDatabase } from '@config/database';
-import type { RefreshToken, CreateRefreshTokenData } from '@types/auth.types';
+import type { RefreshToken, CreateRefreshTokenData } from '@typings/auth.types';
 
 function rowToRefreshToken(row: Record<string, unknown>): RefreshToken {
   return {

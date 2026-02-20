@@ -1,0 +1,267 @@
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useAccounts } from '../hooks/useAccounts';
+import {
+  useSavingsGoals,
+  useSavingsGoalProgress,
+  useCreateSavingsGoal,
+  useUpdateSavingsGoal,
+  useDeleteSavingsGoal,
+} from '../hooks/useSavingsGoals';
+import type { SavingsGoal } from '../types';
+
+// ─── Zod schema ───────────────────────────────────────────────────────────────
+
+const goalSchema = z.object({
+  accountId: z.string().uuid('Select an account'),
+  name: z.string().min(1, 'Name is required').max(255),
+  targetAmount: z.number().positive('Target must be positive'),
+  targetDate: z.string().optional(),
+});
+
+type GoalFormValues = z.infer<typeof goalSchema>;
+
+// ─── GoalForm ─────────────────────────────────────────────────────────────────
+
+function GoalForm({
+  goal,
+  onSuccess,
+  onCancel,
+}: {
+  goal?: SavingsGoal;
+  onSuccess: () => void;
+  onCancel: () => void;
+}) {
+  const { data: accounts = [] } = useAccounts();
+  const createGoal = useCreateSavingsGoal();
+  const updateGoal = useUpdateSavingsGoal(goal?.id ?? '');
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<GoalFormValues>({
+    resolver: zodResolver(goalSchema),
+    defaultValues: {
+      accountId: goal?.accountId ?? '',
+      name: goal?.name ?? '',
+      targetAmount: goal?.targetAmount ?? 0,
+      targetDate: goal?.targetDate ?? '',
+    },
+  });
+
+  const onSubmit = (values: GoalFormValues) => {
+    const data = {
+      accountId: values.accountId,
+      name: values.name,
+      targetAmount: values.targetAmount,
+      targetDate: values.targetDate || undefined,
+    };
+
+    if (goal) {
+      updateGoal.mutate(
+        { name: data.name, targetAmount: data.targetAmount, targetDate: data.targetDate ?? null },
+        { onSuccess }
+      );
+    } else {
+      createGoal.mutate(data, { onSuccess });
+    }
+  };
+
+  const isPending = createGoal.isPending || updateGoal.isPending;
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {!goal && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Account</label>
+          <select
+            {...register('accountId')}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+          >
+            <option value="">Select account…</option>
+            {accounts
+              .filter((a) => a.isActive && a.isAsset)
+              .map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name} (${a.currentBalance.toFixed(2)})
+                </option>
+              ))}
+          </select>
+          {errors.accountId && <p className="mt-1 text-xs text-red-500">{errors.accountId.message}</p>}
+        </div>
+      )}
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Goal Name</label>
+        <input
+          {...register('name')}
+          type="text"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+          placeholder="e.g. Emergency Fund"
+        />
+        {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Target Amount ($)</label>
+          <input
+            {...register('targetAmount', { valueAsNumber: true })}
+            type="number"
+            step="0.01"
+            min="0.01"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+          />
+          {errors.targetAmount && <p className="mt-1 text-xs text-red-500">{errors.targetAmount.message}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Target Date (optional)</label>
+          <input
+            {...register('targetDate')}
+            type="date"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-3">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+        >
+          {isPending ? 'Saving…' : goal ? 'Save Changes' : 'Create Goal'}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// ─── GoalCard ─────────────────────────────────────────────────────────────────
+
+function GoalCard({ goal, onEdit }: { goal: SavingsGoal; onEdit: (goal: SavingsGoal) => void }) {
+  const { data: progress } = useSavingsGoalProgress(goal.id);
+  const deleteGoal = useDeleteSavingsGoal();
+
+  const pct = progress?.percentComplete ?? 0;
+  const current = progress?.currentAmount ?? 0;
+
+  const fmt = (n: number) =>
+    `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900">{goal.name}</h3>
+          {goal.targetDate && (
+            <p className="text-xs text-gray-400 mt-0.5">Target: {goal.targetDate}</p>
+          )}
+        </div>
+        <div className="flex gap-2 text-xs">
+          <button onClick={() => onEdit(goal)} className="text-blue-600 hover:underline">
+            Edit
+          </button>
+          <button
+            onClick={() => deleteGoal.mutate(goal.id)}
+            className="text-red-500 hover:underline"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-2">
+        <div
+          className="h-full bg-green-500 rounded-full transition-all"
+          style={{ width: `${Math.min(pct, 100)}%` }}
+        />
+      </div>
+
+      <div className="flex items-center justify-between text-xs text-gray-500">
+        <span>{fmt(current)} saved</span>
+        <span>{pct.toFixed(1)}% of {fmt(goal.targetAmount)}</span>
+      </div>
+
+      {progress?.projectedDate && pct < 100 && (
+        <p className="mt-1 text-xs text-gray-400">
+          Projected completion: {progress.projectedDate}
+        </p>
+      )}
+      {progress?.daysToGoal !== null && progress?.daysToGoal !== undefined && progress.daysToGoal >= 0 && (
+        <p className="mt-0.5 text-xs text-gray-400">
+          {progress.daysToGoal === 0 ? 'Due today!' : `${progress.daysToGoal} days remaining`}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─── SavingsGoalsPage ─────────────────────────────────────────────────────────
+
+export function SavingsGoalsPage() {
+  const { data: goals = [], isLoading } = useSavingsGoals();
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<SavingsGoal | null>(null);
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Savings Goals</h1>
+        <button
+          onClick={() => { setEditing(null); setShowForm(true); }}
+          className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700"
+        >
+          + New Goal
+        </button>
+      </div>
+
+      {(showForm || editing) && (
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-6">
+          <h2 className="text-base font-semibold text-gray-900 mb-4">
+            {editing ? 'Edit Goal' : 'New Goal'}
+          </h2>
+          <GoalForm
+            goal={editing ?? undefined}
+            onSuccess={() => { setShowForm(false); setEditing(null); }}
+            onCancel={() => { setShowForm(false); setEditing(null); }}
+          />
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-24 bg-gray-100 animate-pulse rounded-xl" />
+          ))}
+        </div>
+      ) : goals.length === 0 && !showForm ? (
+        <div className="text-center py-12 text-gray-400">
+          <p className="text-sm">No savings goals yet. Create one to get started.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {goals.map((goal) => (
+            <GoalCard
+              key={goal.id}
+              goal={goal}
+              onEdit={(g) => { setEditing(g); setShowForm(false); }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

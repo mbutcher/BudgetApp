@@ -4,7 +4,7 @@ import type {
   Account,
   CreateAccountData,
   UpdateAccountData,
-} from '@types/core.types';
+} from '@typings/core.types';
 
 class AccountService {
   async listAccounts(userId: string): Promise<Account[]> {

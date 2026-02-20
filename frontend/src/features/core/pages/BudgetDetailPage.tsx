@@ -4,7 +4,6 @@ import { useBudgetProgress, useDeleteBudget, useUpsertBudgetCategories } from '.
 import { useCategories } from '../hooks/useCategories';
 import { BudgetForm } from '../components/BudgetForm';
 import { cn } from '@lib/utils';
-import type { Budget } from '../types';
 
 export function BudgetDetailPage() {
   const { id } = useParams<{ id: string }>();

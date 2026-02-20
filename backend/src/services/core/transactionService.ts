@@ -3,6 +3,7 @@ import { transactionRepository } from '@repositories/transactionRepository';
 import { transactionLinkRepository } from '@repositories/transactionLinkRepository';
 import { accountRepository } from '@repositories/accountRepository';
 import { encryptionService } from '@services/encryption/encryptionService';
+import { debtService } from '@services/core/debtService';
 import { AppError } from '@middleware/errorHandler';
 import type {
   PublicTransaction,
@@ -12,7 +13,7 @@ import type {
   TransactionFilters,
   TransferCandidate,
   LinkType,
-} from '@types/core.types';
+} from '@typings/core.types';
 
 export interface PaginatedPublicTransactions {
   data: PublicTransaction[];
@@ -85,6 +86,18 @@ class TransactionService {
     });
 
     const publicTx = decryptTransaction(createdTx!);
+
+    // Auto-split payment into principal/interest for loan/mortgage/credit_card accounts
+    const debtAccountTypes = ['loan', 'mortgage', 'credit_card'];
+    if (debtAccountTypes.includes(account.type) && input.amount < 0) {
+      // Fire-and-forget — failure is logged inside debtService but must not reject the response
+      void debtService.autoSplitPayment(
+        createdTx!.id,
+        input.accountId,
+        userId,
+        input.amount
+      );
+    }
 
     // Candidate detection is outside the DB transaction — it's a read-only suggestion
     const candidateRows = await transactionRepository.findTransferCandidates(createdTx!);

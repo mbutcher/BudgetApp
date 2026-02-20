@@ -6,7 +6,7 @@ import { UnauthorizedError, ConflictError } from '@middleware/errorHandler';
 import { encryptionService } from '@services/encryption/encryptionService';
 import { userRepository } from '@repositories/userRepository';
 import { totpBackupCodeRepository } from '@repositories/totpBackupCodeRepository';
-import type { TotpSetupResult } from '@types/auth.types';
+import type { TotpSetupResult } from '@typings/auth.types';
 
 const BACKUP_CODE_COUNT = 8;
 // 10 base32 characters = 50 bits of entropy, sufficient for one-time codes

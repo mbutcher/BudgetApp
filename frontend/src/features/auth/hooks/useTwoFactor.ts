@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { startAuthentication } from '@simplewebauthn/browser';
+import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/types';
 import { authApi } from '../api/authApi';
 import { useAuthStore } from '../stores/authStore';
 
@@ -44,7 +45,7 @@ export function useTwoFactor() {
     mutationFn: async () => {
       const optionsResponse = await authApi.webAuthnAuthenticateOptions();
       const { challengeToken, ...options } = optionsResponse.data.data;
-      const authResponse = await startAuthentication({ optionsJSON: options as never });
+      const authResponse = await startAuthentication(options as unknown as PublicKeyCredentialRequestOptionsJSON);
       const verifyResponse = await authApi.webAuthnAuthenticateVerify(authResponse, challengeToken);
       return verifyResponse.data.data;
     },

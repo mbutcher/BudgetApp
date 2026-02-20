@@ -1,6 +1,7 @@
+import { randomUUID } from 'crypto';
 import type { Knex } from 'knex';
 import { getDatabase } from '@config/database';
-import type { Account, CreateAccountData, UpdateAccountData } from '@types/core.types';
+import type { Account, CreateAccountData, UpdateAccountData } from '@typings/core.types';
 
 function rowToAccount(row: Record<string, unknown>): Account {
   return {
@@ -38,7 +39,9 @@ class AccountRepository {
   }
 
   async create(data: CreateAccountData): Promise<Account> {
-    const [id] = await this.db('accounts').insert({
+    const id = randomUUID();
+    await this.db('accounts').insert({
+      id,
       user_id: data.userId,
       name: data.name,
       type: data.type,
@@ -50,7 +53,7 @@ class AccountRepository {
       institution: data.institution ?? null,
     });
     const row = await this.db('accounts').where({ id }).first();
-    return rowToAccount(row);
+    return rowToAccount(row as Record<string, unknown>);
   }
 
   async update(id: string, userId: string, data: UpdateAccountData): Promise<Account | null> {

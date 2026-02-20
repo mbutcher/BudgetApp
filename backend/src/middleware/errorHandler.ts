@@ -69,13 +69,10 @@ export const errorHandler = (
   // Default to 500 server error
   let statusCode = 500;
   let message = 'Internal server error';
-  let isOperational = false;
-
   // Check if it's our custom error
   if (err instanceof AppError) {
     statusCode = err.statusCode;
     message = err.message;
-    isOperational = err.isOperational;
   }
 
   // Log error
@@ -99,15 +96,15 @@ export const errorHandler = (
   }
 
   // Prepare error response
-  const errorResponse: any = {
+  const errorResponse: Record<string, unknown> = {
     status: statusCode >= 500 ? 'error' : 'fail',
     message,
   };
 
   // Add error details in development
   if (env.isDevelopment) {
-    errorResponse.stack = err.stack;
-    errorResponse.error = err;
+    errorResponse['stack'] = err.stack;
+    errorResponse['error'] = err;
   }
 
   // Send response
@@ -115,8 +112,10 @@ export const errorHandler = (
 };
 
 // Async handler wrapper to catch errors in async route handlers
-export const asyncHandler = (fn: Function) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+export const asyncHandler = (
+  fn: (req: Request, res: Response, next: NextFunction) => Promise<void>
+) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
 };

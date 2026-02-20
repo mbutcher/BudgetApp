@@ -130,7 +130,6 @@ export interface TransactionFilters {
   categoryId?: string;
   startDate?: string;
   endDate?: string;
-  search?: string;
   isTransfer?: boolean;
   page: number;
   limit: number;
@@ -208,4 +207,107 @@ export interface UpdateBudgetData {
 export interface BudgetCategoryEntry {
   categoryId: string;
   allocatedAmount: number;
+}
+
+// ─── Debt Schedules ───────────────────────────────────────────────────────────
+
+export interface DebtSchedule {
+  id: string;
+  userId: string;
+  accountId: string;
+  /** Original loan amount */
+  principal: number;
+  /** Decimal fraction: 0.065 = 6.5% APR */
+  annualRate: number;
+  termMonths: number;
+  originationDate: string; // YYYY-MM-DD
+  paymentAmount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UpsertDebtScheduleData {
+  accountId: string;
+  principal: number;
+  annualRate: number;
+  termMonths: number;
+  originationDate: string;
+  paymentAmount: number;
+}
+
+export interface AmortizationRow {
+  month: number;
+  payment: number;
+  principal: number;
+  interest: number;
+  balance: number;
+}
+
+export interface AmortizationSchedule {
+  schedule: AmortizationRow[];
+  totalInterest: number;
+  payoffDate: string; // YYYY-MM-DD
+}
+
+export interface WhatIfResult {
+  originalPayoffDate: string;
+  newPayoffDate: string;
+  monthsSaved: number;
+  interestSaved: number;
+}
+
+// ─── Transaction Splits ───────────────────────────────────────────────────────
+
+export interface TransactionSplit {
+  id: string;
+  transactionId: string;
+  principalAmount: number;
+  interestAmount: number;
+  createdAt: Date;
+}
+
+// ─── Savings Goals ────────────────────────────────────────────────────────────
+
+export interface SavingsGoal {
+  id: string;
+  userId: string;
+  accountId: string;
+  name: string;
+  targetAmount: number;
+  targetDate: string | null; // YYYY-MM-DD
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateSavingsGoalData {
+  userId: string;
+  accountId: string;
+  name: string;
+  targetAmount: number;
+  targetDate?: string;
+}
+
+export interface UpdateSavingsGoalData {
+  name?: string;
+  targetAmount?: number;
+  targetDate?: string | null;
+}
+
+export interface SavingsGoalProgress {
+  goalId: string;
+  name: string;
+  currentAmount: number;
+  targetAmount: number;
+  percentComplete: number;
+  daysToGoal: number | null;
+  projectedDate: string | null; // YYYY-MM-DD
+}
+
+// ─── Forecast ─────────────────────────────────────────────────────────────────
+
+export interface ForecastMonth {
+  month: string; // YYYY-MM
+  income: number;
+  expenses: number;
+  isForecast: true;
 }

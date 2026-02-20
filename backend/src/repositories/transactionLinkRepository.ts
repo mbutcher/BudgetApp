@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { getDatabase } from '@config/database';
-import type { TransactionLink, LinkType } from '@types/core.types';
+import type { TransactionLink, LinkType } from '@typings/core.types';
 
 function rowToLink(row: Record<string, unknown>): TransactionLink {
   return {

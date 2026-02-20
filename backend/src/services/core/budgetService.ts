@@ -6,7 +6,7 @@ import type {
   BudgetCategoryEntry,
   CreateBudgetData,
   UpdateBudgetData,
-} from '@types/core.types';
+} from '@typings/core.types';
 
 class BudgetService {
   async listBudgets(userId: string): Promise<Budget[]> {
@@ -37,8 +37,8 @@ class BudgetService {
     const existing = await budgetRepository.findById(id, userId);
     if (!existing) throw new AppError('Budget not found', 404);
 
-    const startDate = input.startDate ?? existing.startDate.toISOString().split('T')[0];
-    const endDate = input.endDate ?? existing.endDate.toISOString().split('T')[0];
+    const startDate = input.startDate ?? existing.startDate.toISOString().substring(0, 10);
+    const endDate = input.endDate ?? existing.endDate.toISOString().substring(0, 10);
     if (startDate >= endDate) {
       throw new AppError('start_date must be before end_date', 422);
     }

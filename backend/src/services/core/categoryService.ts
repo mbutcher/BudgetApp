@@ -1,6 +1,6 @@
 import { categoryRepository } from '@repositories/categoryRepository';
 import { AppError } from '@middleware/errorHandler';
-import type { Category, CreateCategoryData, UpdateCategoryData } from '@types/core.types';
+import type { Category, CreateCategoryData, UpdateCategoryData } from '@typings/core.types';
 
 /** Default categories seeded for each new user at registration. */
 const DEFAULT_CATEGORIES: Array<Omit<CreateCategoryData, 'userId'>> = [

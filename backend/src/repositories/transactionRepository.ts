@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import type { Knex } from 'knex';
 import { getDatabase } from '@config/database';
 import type {
@@ -5,9 +6,8 @@ import type {
   CreateTransactionData,
   UpdateTransactionData,
   TransactionFilters,
-  TransferCandidate,
-} from '@types/core.types';
-import type { Account } from '@types/core.types';
+  Account,
+} from '@typings/core.types';
 
 function rowToTransaction(row: Record<string, unknown>): Transaction {
   return {
@@ -73,7 +73,9 @@ class TransactionRepository {
 
   async create(data: CreateTransactionData, trx?: Knex.Transaction): Promise<Transaction> {
     const db = trx ?? this.db;
-    const [id] = await db('transactions').insert({
+    const id = randomUUID();
+    await db('transactions').insert({
+      id,
       user_id: data.userId,
       account_id: data.accountId,
       amount: data.amount,
@@ -84,7 +86,7 @@ class TransactionRepository {
       category_id: data.categoryId ?? null,
     });
     const row = await db('transactions').where({ id }).first();
-    return rowToTransaction(row);
+    return rowToTransaction(row as Record<string, unknown>);
   }
 
   async update(
@@ -143,7 +145,7 @@ class TransactionRepository {
       .where('t.account_id', '!=', tx.accountId)
       .where('t.amount', targetAmount)
       .whereNull('tl.id') // not already linked
-      .whereRaw('ABS(DATEDIFF(t.date, ?)) <= 3', [tx.date.toISOString().split('T')[0]])
+      .whereRaw('ABS(DATEDIFF(t.date, ?)) <= 3', [tx.date.toISOString().substring(0, 10)])
       .select('t.*', 'a.id as a_id', 'a.name as a_name', 'a.type as a_type', 'a.is_asset as a_is_asset', 'a.starting_balance as a_starting_balance', 'a.current_balance as a_current_balance', 'a.currency as a_currency', 'a.color as a_color', 'a.institution as a_institution', 'a.is_active as a_is_active', 'a.created_at as a_created_at', 'a.updated_at as a_updated_at', 'a.user_id as a_user_id')
       .limit(5); // cap candidates returned
 

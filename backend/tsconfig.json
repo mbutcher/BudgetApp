@@ -18,7 +18,7 @@
       "@routes/*": ["routes/*"],
       "@repositories/*": ["repositories/*"],
       "@validators/*": ["validators/*"],
-      "@types/*": ["types/*"],
+      "@typings/*": ["types/*"],
       "@utils/*": ["utils/*"]
     },
     "resolveJsonModule": true,

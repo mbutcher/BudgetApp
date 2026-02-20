@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
+import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/types';
 import { authApi } from '../api/authApi';
 import { useAuthStore } from '../stores/authStore';
 import { useNavigate } from 'react-router-dom';
@@ -17,7 +18,7 @@ export function useWebAuthnRegister() {
       const options = optionsResponse.data.data;
 
       // 2. Prompt browser to create credential
-      const registrationResponse = await startRegistration({ optionsJSON: options as never });
+      const registrationResponse = await startRegistration(options as unknown as PublicKeyCredentialCreationOptionsJSON);
 
       // 3. Verify with server
       const verifyResponse = await authApi.webAuthnRegisterVerify(
@@ -58,7 +59,7 @@ export function useWebAuthnAuthenticate() {
       const { challengeToken, ...options } = optionsResponse.data.data;
 
       // 2. Prompt browser for assertion
-      const authResponse = await startAuthentication({ optionsJSON: options as never });
+      const authResponse = await startAuthentication(options as unknown as PublicKeyCredentialRequestOptionsJSON);
 
       // 3. Verify with server
       const verifyResponse = await authApi.webAuthnAuthenticateVerify(authResponse, challengeToken);
@@ -80,7 +81,6 @@ export function useWebAuthnAuthenticate() {
 
 export function usePasskeys() {
   const queryClient = useQueryClient();
-  const { user, updateUser } = useAuthStore();
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => authApi.deletePasskey(id),

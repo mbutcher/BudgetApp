@@ -1,5 +1,5 @@
 import { getDatabase } from '@config/database';
-import type { User, CreateUserData } from '@types/auth.types';
+import type { User, CreateUserData } from '@typings/auth.types';
 
 // Map snake_case DB row to camelCase User interface
 function rowToUser(row: Record<string, unknown>): User {
@@ -46,7 +46,7 @@ class UserRepository {
 
   async create(data: CreateUserData): Promise<User> {
     const db = this.db;
-    const [id] = await db('users').insert({
+    await db('users').insert({
       email_encrypted: data.emailEncrypted,
       email_hash: data.emailHash,
       password_hash: data.passwordHash,

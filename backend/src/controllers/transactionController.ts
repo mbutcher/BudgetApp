@@ -6,7 +6,7 @@ import type {
   UpdateTransactionData,
   TransactionFilters,
   LinkType,
-} from '@types/core.types';
+} from '@typings/core.types';
 
 class TransactionController {
   list = asyncHandler(async (req: Request, res: Response) => {
@@ -16,7 +16,6 @@ class TransactionController {
       categoryId: query['categoryId'],
       startDate: query['startDate'],
       endDate: query['endDate'],
-      search: query['search'],
       isTransfer: query['isTransfer'] !== undefined ? query['isTransfer'] === 'true' : undefined,
       page: query['page'] ? parseInt(query['page'], 10) : 1,
       limit: query['limit'] ? Math.min(parseInt(query['limit'], 10), 100) : 50,

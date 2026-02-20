@@ -1,12 +1,17 @@
 import type { Request, Response } from 'express';
 import { asyncHandler } from '@middleware/errorHandler';
 import { categoryService } from '@services/core/categoryService';
-import type { CreateCategoryData, UpdateCategoryData } from '@types/core.types';
+import type { CreateCategoryData, UpdateCategoryData } from '@typings/core.types';
 
 class CategoryController {
   list = asyncHandler(async (req: Request, res: Response) => {
     const categories = await categoryService.listCategories(req.user!.id);
     res.json({ status: 'success', data: { categories } });
+  });
+
+  getById = asyncHandler(async (req: Request, res: Response) => {
+    const category = await categoryService.getCategory(req.user!.id, req.params['id']!);
+    res.json({ status: 'success', data: { category } });
   });
 
   create = asyncHandler(async (req: Request, res: Response) => {

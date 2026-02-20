@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { cn } from '@lib/utils';
 import type { Account } from '../types';
 
@@ -51,6 +52,15 @@ export function AccountCard({ account, onClick, className }: AccountCardProps) {
             </p>
             {!account.isActive && (
               <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">Archived</span>
+            )}
+            {['loan', 'mortgage', 'credit_card'].includes(account.type) && account.isActive && (
+              <Link
+                to={`/accounts/${account.id}/debt`}
+                className="text-xs text-blue-600 hover:underline mt-0.5 block"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Debt detail
+              </Link>
             )}
           </div>
         </div>

@@ -5,6 +5,9 @@ import accountRoutes from './accountRoutes';
 import categoryRoutes from './categoryRoutes';
 import transactionRoutes from './transactionRoutes';
 import budgetRoutes from './budgetRoutes';
+import reportRoutes from './reportRoutes';
+import debtRoutes from './debtRoutes';
+import savingsGoalRoutes from './savingsGoalRoutes';
 
 const router = Router();
 
@@ -17,5 +20,8 @@ router.use('/accounts', accountRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/transactions', transactionRoutes);
 router.use('/budgets', budgetRoutes);
+router.use('/reports', reportRoutes);
+router.use('/debt', debtRoutes);
+router.use('/savings-goals', savingsGoalRoutes);
 
 export default router;

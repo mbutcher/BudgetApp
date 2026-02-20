@@ -3,7 +3,22 @@
     "allow": [
       "Bash(ls:*)",
       "Bash(chmod:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(npm test:*)",
+      "Bash(npx jest --passWithNoTests)",
+      "Bash(npm install:*)",
+      "Bash(npx vitest run:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(docker ps:*)",
+      "Bash(./scripts/setup/generate-keys.sh:*)",
+      "Bash(docker compose:*)",
+      "Bash(/usr/local/bin/docker compose:*)",
+      "Bash(docker version:*)",
+      "Bash(docker exec:*)",
+      "Bash(curl:*)",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__navigate_page",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__list_pages",
+      "Bash(open:*)"
     ]
   }
 }

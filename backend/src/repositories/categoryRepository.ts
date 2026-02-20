@@ -1,5 +1,6 @@
+import { randomUUID } from 'crypto';
 import { getDatabase } from '@config/database';
-import type { Category, CreateCategoryData, UpdateCategoryData } from '@types/core.types';
+import type { Category, CreateCategoryData, UpdateCategoryData } from '@typings/core.types';
 
 function rowToCategory(row: Record<string, unknown>): Category {
   return {
@@ -37,6 +38,7 @@ class CategoryRepository {
     if (rows.length === 0) return;
     await this.db('categories').insert(
       rows.map((r) => ({
+        id: randomUUID(),
         user_id: r.userId,
         name: r.name,
         color: r.color ?? null,
@@ -48,7 +50,9 @@ class CategoryRepository {
   }
 
   async create(data: CreateCategoryData): Promise<Category> {
-    const [id] = await this.db('categories').insert({
+    const id = randomUUID();
+    await this.db('categories').insert({
+      id,
       user_id: data.userId,
       name: data.name,
       color: data.color ?? null,
@@ -57,7 +61,7 @@ class CategoryRepository {
       parent_id: data.parentId ?? null,
     });
     const row = await this.db('categories').where({ id }).first();
-    return rowToCategory(row);
+    return rowToCategory(row as Record<string, unknown>);
   }
 
   async update(id: string, userId: string, data: UpdateCategoryData): Promise<Category | null> {

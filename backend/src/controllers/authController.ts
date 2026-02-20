@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { Request, Response } from 'express';
 import { authService } from '@services/auth/authService';
 import { totpService } from '@services/auth/totpService';
 import { webauthnService } from '@services/auth/webauthnService';
@@ -34,7 +34,7 @@ class AuthController {
     );
 
     if (result.requiresTwoFactor) {
-      return res.status(200).json({
+      res.status(200).json({
         status: 'success',
         data: {
           requiresTwoFactor: true,
@@ -42,6 +42,7 @@ class AuthController {
           methods: result.methods,
         },
       });
+      return;
     }
 
     res.cookie(REFRESH_COOKIE_NAME, result.tokens!.refreshToken, REFRESH_COOKIE_OPTIONS);

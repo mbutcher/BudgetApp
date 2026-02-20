@@ -114,7 +114,6 @@ export interface TransactionFilters {
   categoryId?: string;
   startDate?: string;
   endDate?: string;
-  search?: string;
   isTransfer?: boolean;
   page?: number;
   limit?: number;
@@ -178,4 +177,104 @@ export interface UpdateBudgetInput {
 export interface BudgetCategoryEntry {
   categoryId: string;
   allocatedAmount: number;
+}
+
+// ─── Debt Schedules ───────────────────────────────────────────────────────────
+
+export interface DebtSchedule {
+  id: string;
+  userId: string;
+  accountId: string;
+  principal: number;
+  /** Decimal fraction: 0.065 = 6.5% APR */
+  annualRate: number;
+  termMonths: number;
+  originationDate: string; // YYYY-MM-DD
+  paymentAmount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpsertDebtScheduleInput {
+  principal: number;
+  annualRate: number;
+  termMonths: number;
+  originationDate: string;
+  paymentAmount: number;
+}
+
+export interface AmortizationRow {
+  month: number;
+  payment: number;
+  principal: number;
+  interest: number;
+  balance: number;
+}
+
+export interface AmortizationSchedule {
+  schedule: AmortizationRow[];
+  totalInterest: number;
+  payoffDate: string;
+}
+
+export interface WhatIfResult {
+  originalPayoffDate: string;
+  newPayoffDate: string;
+  monthsSaved: number;
+  interestSaved: number;
+}
+
+// ─── Transaction Splits ───────────────────────────────────────────────────────
+
+export interface TransactionSplit {
+  id: string;
+  transactionId: string;
+  principalAmount: number;
+  interestAmount: number;
+  createdAt: string;
+}
+
+// ─── Savings Goals ────────────────────────────────────────────────────────────
+
+export interface SavingsGoal {
+  id: string;
+  userId: string;
+  accountId: string;
+  name: string;
+  targetAmount: number;
+  targetDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSavingsGoalInput {
+  accountId: string;
+  name: string;
+  targetAmount: number;
+  targetDate?: string;
+}
+
+export interface UpdateSavingsGoalInput {
+  name?: string;
+  targetAmount?: number;
+  targetDate?: string | null;
+}
+
+export interface SavingsGoalProgress {
+  goalId: string;
+  name: string;
+  currentAmount: number;
+  targetAmount: number;
+  percentComplete: number;
+  daysToGoal: number | null;
+  projectedDate: string | null;
+}
+
+// ─── Forecast ─────────────────────────────────────────────────────────────────
+
+export interface ForecastMonth {
+  month: string; // YYYY-MM
+  income: number;
+  expenses: number;
+  isForecast: true;
 }

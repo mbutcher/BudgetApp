@@ -59,7 +59,7 @@ export function PasskeySetup() {
 
   const { deviceName, setDeviceName, register, isRegistering, error, isSuccess, reset } =
     useWebAuthnRegister();
-  const { deletePasskey, isDeleting, deleteError } = usePasskeys();
+  const { deletePasskey, deleteError } = usePasskeys();
 
   const passkeys = passkeysData ?? [];
 

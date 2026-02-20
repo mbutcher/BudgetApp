@@ -2,10 +2,11 @@ import winston from 'winston';
 import * as path from 'path';
 import * as fs from 'fs';
 
-// Get configuration from environment
-const NODE_ENV = process.env.NODE_ENV || 'development';
-const LOG_LEVEL = process.env.LOG_LEVEL || (NODE_ENV === 'production' ? 'info' : 'debug');
-const LOG_DIR = process.env.LOG_DIR || './logs';
+// Get configuration from environment (bracket notation for noPropertyAccessFromIndexSignature)
+const e = process.env;
+const NODE_ENV = e['NODE_ENV'] ?? 'development';
+const LOG_LEVEL = e['LOG_LEVEL'] ?? (NODE_ENV === 'production' ? 'info' : 'debug');
+const LOG_DIR = e['LOG_DIR'] ?? './logs';
 
 // Ensure log directory exists
 if (!fs.existsSync(LOG_DIR)) {

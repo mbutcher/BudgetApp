@@ -84,6 +84,13 @@ Phase 2 implemented a full-stack authentication system from database migrations 
 | `app/App.tsx` | Full routing with ProtectedRoute |
 | `main.tsx` (updated) | Mount AppProviders |
 
+### Tests
+
+| File | Coverage |
+|------|---------|
+| `frontend/src/__tests__/stores/authStore.test.ts` | Zustand store: initial state, setAuth, setAccessToken, setTwoFactorRequired, clearAuth, updateUser, setInitialized (9 tests) |
+| `frontend/src/__tests__/schemas/authSchemas.test.ts` | Zod schemas: loginSchema, registerSchema (password rules, matching), totpSchema (6-digit), backupCodeSchema (normalization) (21 tests) |
+
 ### Documentation
 
 | File | Purpose |
@@ -131,6 +138,14 @@ Phase 2 implemented a full-stack authentication system from database migrations 
 | Public key bytes stripped from passkey list response | ✅ |
 | configureApiClient wired (token attaches to requests) | ✅ |
 | Real dummy hash (full Argon2 timing) | ✅ |
+
+---
+
+## Dependency Fix Applied Post-Review
+
+Two devDependencies were missing from `frontend/package.json` and were added:
+- `jsdom` — required by Vitest as a peer dependency when `environment: 'jsdom'` is configured; frontend tests could not run without it.
+- `@vitest/coverage-v8@2.1.9` — required for the `provider: 'v8'` coverage setting; version must match the installed Vitest version.
 
 ---
 
