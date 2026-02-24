@@ -1,7 +1,7 @@
 # BudgetApp — Product Development Roadmap
 
-**Last updated:** 2026-02-23
-**Status:** Phase 7 complete; offline-first PWA shipped
+**Last updated:** 2026-02-24
+**Status:** Phase 9 complete; i18n and user preferences shipped
 
 ---
 
@@ -76,8 +76,6 @@ BudgetApp is a secure, self-hosted personal budgeting application designed for d
 - **6.5.1 Liability Comparison View (2026-02-23):** `/liabilities` page listing all active liability accounts ranked by `annualRate` descending (avalanche method); summary cards (total outstanding + total monthly interest); per-account what-if paydown simulator reusing existing debt `what-if` endpoint; sort by rate, balance, or monthly interest; "Liabilities" nav item in sidebar
 - **6.5.2 Currency Converter (2026-02-23):** `exchange_rates` table + `exchangeRateService` fetching from Frankfurter/ECB API; `GET /api/v1/exchange-rates?from=&to=` endpoint (cached, refreshed daily); `AccountCard` shows `~{defaultCurrency} {convertedAmount}` for non-default currency accounts; Accounts page net worth converted to user's default currency via `useExchangeRates` (parallel TanStack Query); stale rates shown with ⚠ warning; no conversion when all accounts in default currency
 
----
-
 ### Phase 7 — Offline-First PWA
 **Status:** Complete (2026-02-23)
 
@@ -89,46 +87,84 @@ BudgetApp is a secure, self-hosted personal budgeting application designed for d
 - **7.6 Icon Generation:** `scripts/generate-pwa-icons.js` using `sharp`; 9 standard PNGs (72–512px) + 2 maskable PNGs (192, 512px); icons committed to `frontend/public/icons/`
 - **Conflict resolution:** Server always wins (simplified from original last-write-wins plan); conflicts surfaced as notifications, not silently merged
 
+### Phase 8 — Budget Lines, Schedules & Budget View
+**Status:** Complete (2026-02-24)
+
+- **8.1 Budget Lines data model:** `budget_lines` table with embedded Schedule (frequency, frequency_interval, anchor_date); `income`/`expense` classification; `fixed`/`flexible` flexibility; Category/Subcategory hierarchy enforced at service layer (`categoryId` → top-level, `subcategoryId` → child of same parent); `is_pay_period_anchor` flag on at most one income line per user
+- **8.2 Schedule math:** Occurrence generation via `computeOccurrences()` walking forward from `anchor_date`; 7 frequency types: weekly, biweekly, semi_monthly, monthly, every_n_days, annually, one_time; `toAnnual()` converts any frequency to an annual figure for proration
+- **8.3 Budget View:** `GET /budget-view?start=&end=` computes the full `BudgetView` server-side: prorated amounts (annualized × days/365), spending actuals from transactions, variance (plan − actual), and occurrences within the window; `GET /budget-view/pay-period` returns current pay period boundaries derived from the anchor income line
+- **8.4 Frontend — BudgetPage:** Replaced legacy date-range budget UI; period selector (Monthly / This Week / This Pay Period / Custom); `BudgetSummaryBar` with planned income, planned expenses, actual expenses, remaining budget, planned net, actual net; `BudgetLineGroup` (collapsible by Category) → `BudgetLineRow` (progress bar, actual vs. prorated, variance, inline edit); `AddBudgetLineDialog` with frequency/anchor/flexibility/category fields
+- **8.5 Dashboard integration:** Budget snapshot widget updated to query live Budget View data; shows top 3 over-budget expense lines
+- **8.6 Post-implementation bug fixes:** Occurrence status comparison `d < today` → `d <= today`; composite index `(user_id, is_pay_period_anchor)` added; pay period anchor clear+set wrapped in Knex transaction; `frequencyInterval` conditional required in `updateBudgetLineSchema`; dead `formatCurrency` export removed from `budgetViewUtils.ts`
+
+### Phase 9 — Localization, User Preferences & i18n Infrastructure
+**Status:** Complete (2026-02-24)
+
+- **9.1 User preference fields:** 5 new columns on `users` table: `locale` (VARCHAR 10, default `'en-CA'`), `date_format` (ENUM, default `'DD/MM/YYYY'`), `time_format` (ENUM, default `'12h'`), `timezone` (VARCHAR 100, default `'America/Toronto'`), `week_start` (ENUM, default `'sunday'`); existing `default_currency` retained
+- **9.2 Backend:** Migration `20260225001`; updated `User`/`PublicUser` types and `userRepository` mappers; extended `updateProfileSchema` (all 6 fields optional, at least 1 required); `updateProfile` service and controller pass all preference fields through `PATCH /auth/me`
+- **9.3 i18next infrastructure:** `i18next` + `react-i18next` installed; `src/lib/i18n/index.ts` initializes with `lng: 'en-CA'`; `src/lib/i18n/locales/en-CA.json` contains all UI strings organized by feature section; `i18n.changeLanguage(locale)` called in `AuthInitializer` when user locale changes
+- **9.4 `useFormatters()` hook:** Single formatting surface for all components; reads user preferences from Zustand auth store; returns `{ currency(n, override?), date(v), time(v), dateTime(v) }` — all `useMemo`-memoized; `Intl.NumberFormat` for currency, `Intl.DateTimeFormat` for dates/times; ISO date-only strings split directly (no UTC midnight shift); accepts optional currency override for per-account display
+- **9.5 Component updates:** `AppLayout` nav uses `useTranslation()` for all labels; `BudgetLineRow`, `BudgetLineGroup`, `BudgetSummaryBar`, `AccountCard`, `DashboardPage` all migrated from `formatCurrency` import to `useFormatters().currency`
+- **9.6 PreferencesPage:** Full rewrite — 6 sections: Language (locale, `fr-CA` disabled "Coming soon"), Default Currency, Date Format, Time Format (radio), Timezone (grouped IANA optgroup select built from `Intl.supportedValuesOf('timeZone')`), Start of Week; single Save button sends all fields in one `PATCH`
+
 ---
 
 ## Upcoming Phases
 
 ---
 
-### Phase 8 — Enhanced Reports & Recurring Transactions
-**Priority:** Medium
+### Phase 10 — Enhanced Reports & Analytics
+**Priority:** High
 **Estimated scope:** Medium
 
 #### Overview
-Add richer reporting and recurring transaction management.
+Extend the reporting layer with category-level drill-down, net worth history, and top-payee analysis. These capabilities were deferred when Phase 8 shifted from a simpler budget model to the full Budget Lines architecture.
 
 #### Feature Specs
 
-**8.1 Enhanced Reports**
-- Spending by category (pie/donut chart, configurable date range)
-- Income vs. expenses trend (extend Phase 4's 6-month bar chart to custom date ranges)
-- Net worth over time (line chart, monthly snapshots stored in `net_worth_snapshots` table)
-- Top payees by spend (bar chart, configurable period)
+**10.1 Spending by Category**
+- Pie/donut chart: spending per category for a configurable date range
+- Drill-down to subcategory level
+- Toggle between expense categories and income categories
 
-**8.2 Recurring Transactions**
-- `recurring_transactions` table: template transaction, frequency (daily/weekly/biweekly/monthly/annually), next_due_date, end_date
-- Cron job generates actual transaction records when due date is reached
-- UI to define and manage recurring transactions; "Skip this occurrence" action
+**10.2 Net Worth Over Time**
+- Line chart: monthly net worth snapshots stored in `net_worth_snapshots` table
+- Background job or on-demand snapshot via `POST /reports/net-worth/snapshot`
+- Display alongside income/expenses chart on Dashboard
+
+**10.3 Top Payees**
+- Bar chart: top N payees by total spend for a configurable period
+- Requires decrypting payee field at query time — consider a plaintext search index if performance is a concern
+
+**10.4 Recurring Transactions**
+- `recurring_transactions` table: template transaction, frequency, next_due_date, end_date
+- Cron job generates actual transactions when due date is reached (idempotent via `next_due_date` advancement)
+- UI to create/edit/pause/delete recurring transactions; "Skip this occurrence" action
 
 #### Acceptance Criteria
-- [ ] Spending by category chart is accurate and matches sum of transactions in that category for the period
-- [ ] Recurring transactions are created on schedule without duplication
-- [ ] Net worth chart reflects balance history accurately
+- [ ] Spending by category chart matches sum of transactions for the period
+- [ ] Net worth line chart reflects actual balance history
+- [ ] Recurring transactions are generated on schedule without duplication
 
 #### Notes
-- **8.1 Net worth chart** requires a new `net_worth_snapshots` table — no migration yet
-- **8.2 Recurring transactions** — cron idempotency is critical; use `next_due_date` advancement (not delete-and-recreate) to prevent duplicates on crash/restart
+- **10.2 Net worth chart** requires new `net_worth_snapshots` table — no migration yet
+- **10.4 Recurring transactions** — cron idempotency critical; use `next_due_date` advancement, not delete-and-recreate
+
+---
+
+### Phase 11 — Full-Text Transaction Search
+**Priority:** Medium
+**Estimated scope:** Medium
+
+Build a secondary plaintext search index alongside encrypted transaction storage, enabling payee/description search without exposing PII in plaintext at rest.
+
+- Dedicated search table (`transaction_search_index`) storing a deterministic hash-based search token or Meilisearch integration
+- `GET /transactions?q=coffee` endpoint
+- Frontend search bar in TransactionsPage
 
 ---
 
 ### Future Additions (Deferred)
-
-Features that may be added later if the app is shared or needs broader data portability.
 
 **CSV & OFX Export**
 - `GET /api/v1/transactions/export?format=csv&startDate=&endDate=` — streams CSV with decrypted payee/description
@@ -141,20 +177,33 @@ Features that may be added later if the app is shared or needs broader data port
 - `transaction_attachments` table: transaction_id FK, storage_key, mime_type, size_bytes; object stored encrypted with AES-256-GCM
 - Thumbnail preview on transaction detail; download button
 
+**fr-CA Localization**
+- French (Canada) translation strings in `src/lib/i18n/locales/fr-CA.json`
+- Locale selector in PreferencesPage becomes fully functional (currently `fr-CA` shown as "Coming soon")
+
+**Savings Goal ↔ Budget Line Link**
+- Add `recurring_contribution_budget_line_id` FK on `savings_goals`
+- Budget Line contributions automatically tracked against goal progress
+- Deferred: `savings_goals` table exists; FK can be added non-breakingly
+
 ---
 
 ## Technical Debt & Non-Feature Work
 
 | Item | Priority | Notes |
 |------|----------|-------|
-| Full-text transaction search | Medium | Requires maintaining a plaintext search index (Meilisearch or dedicated search table) alongside encrypted fields. Deferred until Phase 5+ when sync architecture is finalized. |
-| Budget total validation | Low | Nothing prevents allocations from exceeding a desired ceiling. Add optional `limit` field to budgets table. |
-| Category `createBatch()` return values | Low | Currently `void`; returning created categories would allow the seeded defaults to be immediately shown in the UI without a second fetch. |
-| API pagination for accounts | Low | Accounts list is unbounded; add `page`/`limit` for users with many accounts. |
+| E2E test suite | High | No end-to-end tests exist. Add Playwright tests for critical paths: registration, login, create transaction, budget progress, budget view. |
+| OpenAPI spec coverage | High | Spec only documents `/health` and partial auth paths. All other endpoints are undocumented. Full spec rewrite needed. |
+| `database-schema.md` | Medium | Full schema reference document exists now (see `docs/planning/database-schema.md`). Keep updated as migrations are added. |
+| Full-text transaction search | Medium | Requires maintaining a plaintext search index alongside encrypted fields. Deferred until architecture is finalized. |
+| Budget Lines offline support | Medium | `useBudgetLines` hook lacks Dexie fallback; Budget View cannot be served offline — last cached view or clear "offline" state needed. Dexie schema needs `LocalBudgetLine` added. |
 | Session management UI | Medium | Currently users can see active sessions but cannot see device names for refresh tokens. Add `device_name` population from User-Agent parsing. |
+| Load testing | Medium | No load tests. Add k6 scripts for transaction import endpoint. |
+| API pagination for accounts | Low | Accounts list is unbounded; add `page`/`limit` for users with many accounts. |
+| Budget total validation | Low | Nothing prevents allocations from exceeding a desired ceiling. Add optional `limit` field to budgets table. |
 | Rate limit tuning | Low | Auth endpoints use 5 req/15 min; evaluate whether this needs adjustment for WebAuthn flows where multiple round-trips are expected. |
-| E2E test suite | High | No end-to-end tests exist. Add Playwright tests for critical paths: registration, login, create transaction, budget progress. |
-| Load testing | Medium | No load tests. Add k6 scripts for the transaction import endpoint before Phase 5 ships. |
+| fr-CA i18n keys | Low | `en-CA.json` translation keys exist; `fr-CA.json` stub is needed but deferred. |
+| Lighthouse PWA score | Low | Not formally measured. Requires production build with HTTPS to audit accurately. |
 
 ---
 
@@ -171,3 +220,6 @@ See [docs/planning/architecture-decisions/](./architecture-decisions/) for full 
 | Charts | Recharts | Already installed; React-native; sufficient for bar/line/pie charts needed |
 | Search | Deferred | Encrypted fields cannot be searched with SQL LIKE; requires dedicated search index |
 | SimpleFIN | Phase 5 | Requires stable account/transaction schema first |
+| Budget model | Budget Lines (Phase 8) | Forward-looking plan: lines belong to user (not a date-range container), schedule-driven occurrences, prorated Budget View replaces static allocations |
+| i18n | i18next + react-i18next | Industry standard; JSON resource files; `useFormatters()` hook wraps `Intl.*` APIs for currency/date/time formatting |
+| Conflict resolution (offline) | Server always wins | Single-user app — server is authoritative; conflicts surfaced as notifications, not silently merged |
