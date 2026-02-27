@@ -39,7 +39,7 @@ class DashboardHintsService {
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
 
     // Run all hint queries in parallel
-    const [uncatCount, overAvgCategories, , anchorCount] = await Promise.all([
+    const [uncatCount, overAvgCategories, anchorCount] = await Promise.all([
       // Uncategorised transactions this month
       db('transactions')
         .where({ user_id: userId, is_transfer: false })
@@ -49,13 +49,16 @@ class DashboardHintsService {
         .count({ cnt: '*' })
         .first() as Promise<TxCountRow | undefined>,
 
-      // Categories where this month's spend > 3-month average by ≥15%
+      // Categories where this month's spend > 3-month average by ≥15%.
+      // current_total is computed in a separate LEFT JOIN subquery to avoid
+      // the N×M Cartesian product (monthly_totals × transactions) that would
+      // inflate the SUM when a category has multiple months of history.
       db
         .raw<{ rows: CategoryAvgRow[] }>(
           `
         SELECT
           c.name AS category_name,
-          SUM(CASE WHEN t.date >= ? AND t.date <= ? THEN ABS(t.amount) ELSE 0 END) AS current_total,
+          COALESCE(curr.current_total, 0) AS current_total,
           AVG(monthly_totals.monthly_spend) AS avg_past
         FROM (
           SELECT
@@ -72,25 +75,25 @@ class DashboardHintsService {
           GROUP BY t2.category_id, mo
         ) AS monthly_totals
         JOIN categories c ON c.id = monthly_totals.category_id
-        JOIN transactions t ON t.category_id = monthly_totals.category_id AND t.user_id = ?
-        WHERE t.date >= ? AND t.date <= ? AND t.is_transfer = 0 AND t.amount < 0
-        GROUP BY c.id, c.name
+        LEFT JOIN (
+          SELECT category_id, SUM(ABS(amount)) AS current_total
+          FROM transactions
+          WHERE user_id = ?
+            AND is_transfer = 0
+            AND amount < 0
+            AND category_id IS NOT NULL
+            AND date >= ?
+            AND date <= ?
+          GROUP BY category_id
+        ) AS curr ON curr.category_id = monthly_totals.category_id
+        GROUP BY c.id, c.name, curr.current_total
         HAVING current_total > 0 AND avg_past > 0 AND (current_total / avg_past) > 1.15
         LIMIT 3
         `,
-          [monthStart, monthEnd, userId, monthStart, monthStart, userId, monthStart, monthEnd]
+          [userId, monthStart, monthStart, userId, monthStart, monthEnd]
         )
         .then((result) => result.rows ?? [])
         .catch(() => [] as CategoryAvgRow[]),
-
-      // Unlinked transfer candidates (is_transfer = false, same amount in opposite sign same day)
-      db('transactions')
-        .where({ user_id: userId, is_transfer: false })
-        .whereNull('link_id')
-        .where('date', '>=', monthStart)
-        .where('date', '<=', monthEnd)
-        .count({ cnt: '*' })
-        .first() as Promise<AnchorRow | undefined>,
 
       // Whether a pay-period anchor budget line exists
       db('budget_lines')

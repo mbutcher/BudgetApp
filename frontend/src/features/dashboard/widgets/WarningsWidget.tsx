@@ -10,6 +10,7 @@ interface Warning {
 }
 
 function useAccountWarnings(excludedAccountIds: string[]): Warning[] {
+  const { t } = useTranslation();
   const { data: accounts = [] } = useAccounts();
 
   const warnings: Warning[] = [];
@@ -18,7 +19,10 @@ function useAccountWarnings(excludedAccountIds: string[]): Warning[] {
     (a) => a.isActive && a.isAsset && a.currentBalance < 0 && !excludedAccountIds.includes(a.id),
   );
   for (const acct of negativeAssets) {
-    warnings.push({ id: `neg-${acct.id}`, message: `${acct.name} has a negative balance` });
+    warnings.push({
+      id: `neg-${acct.id}`,
+      message: t('dashboard.warningNegativeBalance', { name: acct.name }),
+    });
   }
 
   return warnings;
@@ -31,6 +35,7 @@ interface GoalWarningProps {
 }
 
 function GoalDeadlineWarning({ goalId, goalName, targetDate }: GoalWarningProps) {
+  const { t } = useTranslation();
   const { data: progress } = useSavingsGoalProgress(goalId);
   const daysLeft = Math.ceil(
     (new Date(targetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
@@ -44,9 +49,7 @@ function GoalDeadlineWarning({ goalId, goalName, targetDate }: GoalWarningProps)
   return (
     <div className="flex items-center gap-2 text-amber-700 text-sm">
       <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-      <span>
-        Savings goal &quot;{goalName}&quot; is due in {daysLeft} day{daysLeft === 1 ? '' : 's'} and behind pace
-      </span>
+      <span>{t('dashboard.warningGoalBehindPace', { name: goalName, count: daysLeft })}</span>
     </div>
   );
 }

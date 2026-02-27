@@ -5,7 +5,7 @@ import { useFormatters } from '@lib/i18n/useFormatters';
 import type { Transaction } from '@features/core/types';
 
 function TransactionRow({ tx }: { tx: Transaction }) {
-  const { currency: fmt } = useFormatters();
+  const { currency: fmt, date: fmtDate } = useFormatters();
   const isPositive = tx.amount > 0;
   return (
     <div className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0">
@@ -13,7 +13,7 @@ function TransactionRow({ tx }: { tx: Transaction }) {
         <p className="text-sm font-medium text-gray-900 truncate">
           {tx.payee ?? tx.description ?? '—'}
         </p>
-        <p className="text-xs text-gray-400">{tx.date}</p>
+        <p className="text-xs text-gray-400">{fmtDate(tx.date)}</p>
       </div>
       <p
         className={`ml-4 text-sm font-semibold tabular-nums flex-shrink-0 ${isPositive ? 'text-green-600' : 'text-gray-900'}`}

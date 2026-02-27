@@ -64,6 +64,8 @@ tags:
     description: SimpleFIN Bridge integration for automated bank sync
   - name: Analytics
     description: Spending analysis and financial insights
+  - name: Dashboard
+    description: User-configurable dashboard layout and smart hints
 
 security:
   - bearerAuth: []

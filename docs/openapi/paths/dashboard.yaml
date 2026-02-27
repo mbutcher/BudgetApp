@@ -1,0 +1,169 @@
+components:
+  schemas:
+    GridLayoutItem:
+      type: object
+      required: [i, x, y, w, h]
+      properties:
+        i:
+          type: string
+          enum: [warnings, net-worth, account-balances, budget-snapshot, upcoming-expenses, monthly-chart, savings-goals, recent-transactions, hints]
+          description: Widget identifier
+        x: { type: integer, description: Column position (0-based) }
+        y: { type: integer, description: Row position (0-based) }
+        w: { type: integer, description: Width in columns }
+        h: { type: integer, description: Height in row units }
+
+    DashboardLayouts:
+      type: object
+      description: Grid layouts for each responsive breakpoint (xs=2col, sm=4col, lg=6col, xl=8col)
+      required: [xs, sm, lg, xl]
+      properties:
+        xs:
+          type: array
+          items: { $ref: '#/components/schemas/GridLayoutItem' }
+        sm:
+          type: array
+          items: { $ref: '#/components/schemas/GridLayoutItem' }
+        lg:
+          type: array
+          items: { $ref: '#/components/schemas/GridLayoutItem' }
+        xl:
+          type: array
+          items: { $ref: '#/components/schemas/GridLayoutItem' }
+
+    DashboardConfig:
+      type: object
+      required: [userId, widgetVisibility, excludedAccountIds, layouts, updatedAt]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        widgetVisibility:
+          type: object
+          description: Map of widget ID to enabled boolean. `warnings` is always true.
+          additionalProperties:
+            type: boolean
+          example:
+            warnings: true
+            net-worth: true
+            account-balances: true
+            budget-snapshot: false
+        excludedAccountIds:
+          type: array
+          items: { type: string, format: uuid }
+          description: Account IDs hidden from dashboard widgets (e.g. excluded from net worth)
+        layouts:
+          $ref: '#/components/schemas/DashboardLayouts'
+        updatedAt:
+          type: string
+          format: date-time
+
+    DashboardHint:
+      type: object
+      required: [id, type, message]
+      properties:
+        id:
+          type: string
+          description: Stable hint identifier (e.g. "uncategorized-transactions")
+        type:
+          type: string
+          enum: [action, warning, info]
+        message:
+          type: string
+        linkTo:
+          type: string
+          description: Optional relative path to navigate to for the action
+
+paths:
+  /dashboard/config:
+    get:
+      summary: Get dashboard configuration
+      description: |
+        Returns the authenticated user's saved dashboard layout and widget visibility settings.
+        If no config has been saved yet, returns the default configuration.
+      tags: [Dashboard]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Dashboard config
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [success] }
+                  data:
+                    type: object
+                    properties:
+                      config: { $ref: '#/components/schemas/DashboardConfig' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+
+    put:
+      summary: Save dashboard configuration
+      description: |
+        Saves the user's dashboard layout and widget visibility preferences.
+        The `warnings` widget is always forced to `true` regardless of the request body.
+        Clears the hints cache so account filter changes take effect immediately.
+      tags: [Dashboard]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [widgetVisibility, excludedAccountIds, layouts]
+              properties:
+                widgetVisibility:
+                  type: object
+                  additionalProperties: { type: boolean }
+                excludedAccountIds:
+                  type: array
+                  items: { type: string, format: uuid }
+                layouts:
+                  $ref: '#/components/schemas/DashboardLayouts'
+      responses:
+        '200':
+          description: Saved dashboard config
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [success] }
+                  data:
+                    type: object
+                    properties:
+                      config: { $ref: '#/components/schemas/DashboardConfig' }
+        '400': { $ref: '#/components/responses/BadRequestError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+
+  /dashboard/hints:
+    get:
+      summary: Get smart dashboard hints
+      description: |
+        Returns context-aware hints and action items for the authenticated user:
+        - Uncategorised transactions this month
+        - Categories with spending ≥15% above 3-month average
+        - Missing pay-period anchor budget line
+
+        Results are cached for 15 minutes per user. The cache is cleared when the
+        user saves a new dashboard config (e.g. when excluded accounts change).
+      tags: [Dashboard]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: List of hints (may be empty)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [success] }
+                  data:
+                    type: object
+                    properties:
+                      hints:
+                        type: array
+                        items: { $ref: '#/components/schemas/DashboardHint' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
