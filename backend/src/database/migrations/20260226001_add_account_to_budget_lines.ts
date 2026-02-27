@@ -14,6 +14,9 @@ export async function up(knex: Knex): Promise<void> {
 
 export async function down(knex: Knex): Promise<void> {
   await knex.schema.alterTable('budget_lines', (table) => {
+    table.dropForeign(['account_id']);
+  });
+  await knex.schema.alterTable('budget_lines', (table) => {
     table.dropColumn('account_id');
   });
 }
