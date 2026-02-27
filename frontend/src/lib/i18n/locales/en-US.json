@@ -62,6 +62,11 @@
     "passkeysDesc": "Passkeys let you sign in with your fingerprint, face ID, or security key — no password needed.",
     "sessions": "Sessions",
     "sessionsDesc": "Manage your active login sessions.",
+    "sessionsEmpty": "No active sessions found.",
+    "sessionsThisDevice": "This device",
+    "sessionsSignOut": "Sign out",
+    "sessionsLastUsed": "Last used",
+    "sessionsSignedIn": "Signed in",
     "signOutEverywhere": "Sign out everywhere",
     "signOutEverywhereDesc": "Revokes all refresh tokens across all devices.",
     "signOutAll": "Sign out all"
@@ -76,7 +81,7 @@
     "emptyTitle": "No budget lines yet",
     "emptyDescription": "Add your first budget line to start planning your income and expenses.",
     "offlineError": "Budget View is not available offline.",
-    "offlineInfo": "Your budget lines are still available below when connection returns.",
+    "offlineInfo": "Cached budget lines are shown below — spending data requires a connection.",
     "staleDataWarning": "Could not refresh the budget view. Showing last loaded data.",
     "plannedIncome": "Planned Income",
     "plannedExpenses": "Planned Expenses",
@@ -297,7 +302,10 @@
     "dueToday": "Due today!",
     "projectedCompletion": "Projected completion:",
     "editBtn": "Edit",
-    "deleteBtn": "Delete"
+    "deleteBtn": "Delete",
+    "budgetLine": "Linked Budget Line",
+    "budgetLinePlaceholder": "None (no linked budget line)",
+    "linkedBudgetLine": "Contributing via: {{name}}"
   },
   "liabilities": {
     "title": "Liabilities",

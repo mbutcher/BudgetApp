@@ -14,8 +14,36 @@ import type {
   AuthResult,
   AuthTokens,
   PublicUser,
+  SessionInfo,
   UpdateProfileData,
 } from '@typings/auth.types';
+
+/**
+ * Parse a User-Agent string into a human-readable device name.
+ * Returns a short label like "Chrome on macOS" or "Safari on iPhone".
+ */
+function parseDeviceName(userAgent: string): string {
+  const ua = userAgent;
+  // Browser detection (order matters — Edge must precede Chrome)
+  let browser = 'Browser';
+  if (/Edg\//.test(ua)) browser = 'Edge';
+  else if (/OPR\/|Opera/.test(ua)) browser = 'Opera';
+  else if (/Firefox\//.test(ua)) browser = 'Firefox';
+  else if (/Chrome\//.test(ua)) browser = 'Chrome';
+  else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) browser = 'Safari';
+  else if (/MSIE|Trident/.test(ua)) browser = 'Internet Explorer';
+
+  // OS detection
+  let os = 'Unknown OS';
+  if (/iPhone/.test(ua)) os = 'iPhone';
+  else if (/iPad/.test(ua)) os = 'iPad';
+  else if (/Android/.test(ua)) os = 'Android';
+  else if (/Windows NT/.test(ua)) os = 'Windows';
+  else if (/Mac OS X/.test(ua)) os = 'macOS';
+  else if (/Linux/.test(ua)) os = 'Linux';
+
+  return `${browser} on ${os}`;
+}
 
 const GENERIC_AUTH_ERROR = 'Invalid email or password';
 const LOCKOUT_ERROR = 'Account temporarily locked due to too many failed login attempts';
@@ -226,11 +254,22 @@ class AuthService {
       tokenHash,
       deviceFingerprint: fingerprint,
       userAgent: meta.userAgent.substring(0, 512),
+      deviceName: parseDeviceName(meta.userAgent).substring(0, 100),
       ipAddress: meta.ip,
       expiresAt,
     });
 
     return { accessToken, refreshToken: rawRefreshToken };
+  }
+
+  /** List all active sessions for a user, marking the current one if the refresh token hash is provided. */
+  async listSessions(userId: string, currentTokenHash: string | null): Promise<SessionInfo[]> {
+    return refreshTokenRepository.listActiveForUser(userId, currentTokenHash);
+  }
+
+  /** Revoke a specific session. Returns false if not found or already revoked. */
+  async revokeSession(userId: string, sessionId: string): Promise<boolean> {
+    return refreshTokenRepository.revokeByIdForUser(sessionId, userId);
   }
 
   /** Update user profile preferences. */

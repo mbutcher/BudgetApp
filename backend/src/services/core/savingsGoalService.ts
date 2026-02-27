@@ -1,12 +1,31 @@
 import { savingsGoalRepository } from '@repositories/savingsGoalRepository';
 import { accountRepository } from '@repositories/accountRepository';
+import { budgetLineRepository } from '@repositories/budgetLineRepository';
 import { AppError } from '@middleware/errorHandler';
 import type {
   SavingsGoal,
+  BudgetLineFrequency,
   CreateSavingsGoalData,
   UpdateSavingsGoalData,
   SavingsGoalProgress,
 } from '@typings/core.types';
+
+/** Convert a BudgetLine frequency + amount to a monthly contribution in dollars. */
+function toMonthlyAmount(amount: number, frequency: BudgetLineFrequency, frequencyInterval: number | null): number {
+  switch (frequency) {
+    case 'weekly':       return amount * (52 / 12);
+    case 'biweekly':     return amount * (26 / 12);
+    case 'semi_monthly': return amount * 2;
+    case 'twice_monthly':return amount * 2;
+    case 'monthly':      return amount;
+    case 'annually':     return amount / 12;
+    case 'every_n_days': {
+      const interval = frequencyInterval ?? 30;
+      return amount * (365 / interval / 12);
+    }
+    case 'one_time':     return 0;
+  }
+}
 
 class SavingsGoalService {
   async listGoals(userId: string): Promise<SavingsGoal[]> {
@@ -25,6 +44,10 @@ class SavingsGoalService {
   ): Promise<SavingsGoal> {
     const account = await accountRepository.findById(input.accountId, userId);
     if (!account) throw new AppError('Account not found', 404);
+    if (input.budgetLineId) {
+      const bl = await budgetLineRepository.findById(input.budgetLineId, userId);
+      if (!bl) throw new AppError('Budget line not found', 404);
+    }
     return savingsGoalRepository.create({ ...input, userId });
   }
 
@@ -35,6 +58,10 @@ class SavingsGoalService {
   ): Promise<SavingsGoal> {
     const existing = await savingsGoalRepository.findById(userId, goalId);
     if (!existing) throw new AppError('Savings goal not found', 404);
+    if (input.budgetLineId) {
+      const bl = await budgetLineRepository.findById(input.budgetLineId, userId);
+      if (!bl) throw new AppError('Budget line not found', 404);
+    }
     const updated = await savingsGoalRepository.update(userId, goalId, input);
     return updated!;
   }
@@ -70,7 +97,22 @@ class SavingsGoalService {
       );
     }
 
-    if (daysToGoal !== null && daysToGoal > 0 && currentAmount < goal.targetAmount) {
+    // If a budget line is linked, use its monthly contribution to project completion.
+    if (goal.budgetLineId && currentAmount < goal.targetAmount) {
+      const bl = await budgetLineRepository.findById(goal.budgetLineId, userId);
+      if (bl && bl.amount > 0) {
+        const monthlyContribution = toMonthlyAmount(bl.amount, bl.frequency, bl.frequencyInterval);
+        if (monthlyContribution > 0) {
+          const remaining = goal.targetAmount - currentAmount;
+          const monthsNeeded = Math.ceil(remaining / monthlyContribution);
+          const projected = new Date();
+          projected.setMonth(projected.getMonth() + monthsNeeded);
+          projectedDate = projected.toISOString().slice(0, 10);
+          // daysToGoal not meaningful when derived from contribution rate rather than target date
+          if (!goal.targetDate) daysToGoal = monthsNeeded * 30;
+        }
+      }
+    } else if (daysToGoal !== null && daysToGoal > 0 && currentAmount < goal.targetAmount) {
       const remaining = goal.targetAmount - currentAmount;
       const dailyRate = remaining / daysToGoal;
       if (dailyRate > 0) {

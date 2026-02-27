@@ -62,6 +62,11 @@
     "passkeysDesc": "Les clés d'accès vous permettent de vous connecter avec votre empreinte digitale, Face ID ou une clé de sécurité — sans mot de passe.",
     "sessions": "Sessions",
     "sessionsDesc": "Gérez vos sessions de connexion actives.",
+    "sessionsEmpty": "Aucune session active trouvée.",
+    "sessionsThisDevice": "Cet appareil",
+    "sessionsSignOut": "Déconnecter",
+    "sessionsLastUsed": "Dernière utilisation",
+    "sessionsSignedIn": "Connecté le",
     "signOutEverywhere": "Se déconnecter partout",
     "signOutEverywhereDesc": "Révoque tous les jetons d'actualisation sur tous les appareils.",
     "signOutAll": "Déconnecter tout"
@@ -76,7 +81,7 @@
     "emptyTitle": "Aucune ligne budgétaire",
     "emptyDescription": "Ajoutez votre première ligne budgétaire pour commencer à planifier vos revenus et dépenses.",
     "offlineError": "La vue budgétaire n'est pas disponible hors ligne.",
-    "offlineInfo": "Vos lignes budgétaires sont disponibles ci-dessous au retour de la connexion.",
+    "offlineInfo": "Les lignes budgétaires en cache sont affichées ci-dessous — les données de dépenses nécessitent une connexion.",
     "staleDataWarning": "Impossible d'actualiser la vue budgétaire. Affichage des dernières données.",
     "plannedIncome": "Revenus prévus",
     "plannedExpenses": "Dépenses prévues",
@@ -297,7 +302,10 @@
     "dueToday": "Échéance aujourd'hui !",
     "projectedCompletion": "Achèvement prévu :",
     "editBtn": "Modifier",
-    "deleteBtn": "Supprimer"
+    "deleteBtn": "Supprimer",
+    "budgetLine": "Ligne budgétaire liée",
+    "budgetLinePlaceholder": "Aucune (pas de ligne budgétaire liée)",
+    "linkedBudgetLine": "Contribution via : {{name}}"
   },
   "liabilities": {
     "title": "Passifs",

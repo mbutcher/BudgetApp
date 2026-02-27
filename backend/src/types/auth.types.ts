@@ -29,11 +29,25 @@ export interface RefreshToken {
   tokenHash: string;
   deviceFingerprint: string | null;
   userAgent: string | null;
+  /** Human-readable device name derived from user agent, e.g. "Chrome on macOS" */
+  deviceName: string | null;
+  /** Timestamp of the most recent use (refresh) of this token */
+  lastUsedAt: Date | null;
   ipAddress: string | null;
   isRevoked: boolean;
   expiresAt: Date;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/** Safe public representation of a session for the sessions list endpoint. */
+export interface SessionInfo {
+  id: string;
+  deviceName: string | null;
+  ipAddress: string | null;
+  lastUsedAt: Date | null;
+  createdAt: Date;
+  isCurrent: boolean;
 }
 
 export interface Passkey {
@@ -157,6 +171,7 @@ export interface CreateRefreshTokenData {
   tokenHash: string;
   deviceFingerprint: string | null;
   userAgent: string | null;
+  deviceName: string | null;
   ipAddress: string | null;
   expiresAt: Date;
 }

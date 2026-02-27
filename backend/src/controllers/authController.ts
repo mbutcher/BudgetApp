@@ -200,6 +200,33 @@ class AuthController {
     await passkeyRepository.delete(id!, req.user!.id);
     res.status(200).json({ status: 'success', data: null });
   });
+
+  // ─── Session management ────────────────────────────────────────────────────
+
+  listSessions = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.id;
+    // Read the refresh token cookie to identify the current session
+    const rawRefreshToken: string | undefined = req.cookies[REFRESH_COOKIE_NAME];
+    let currentTokenHash: string | null = null;
+    if (rawRefreshToken) {
+      const { encryptionService } = await import('@services/encryption/encryptionService');
+      currentTokenHash = encryptionService.hashToken(rawRefreshToken);
+    }
+    const sessions = await authService.listSessions(userId, currentTokenHash);
+    res.json({ status: 'success', data: { sessions } });
+  });
+
+  revokeSession = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.id;
+    const sessionId = req.params['id'];
+    if (!sessionId) throw new UnauthorizedError('Session ID required');
+    const revoked = await authService.revokeSession(userId, sessionId);
+    if (!revoked) {
+      res.status(404).json({ status: 'error', error: 'Session not found' });
+      return;
+    }
+    res.json({ status: 'success', data: null });
+  });
 }
 
 export const authController = new AuthController();

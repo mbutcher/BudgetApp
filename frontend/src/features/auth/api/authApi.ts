@@ -1,5 +1,5 @@
 import { apiClient } from '@lib/api/client';
-import type { User, Passkey, TotpSetupData, UpdateProfileInput } from '../types';
+import type { User, Passkey, SessionInfo, TotpSetupData, UpdateProfileInput } from '../types';
 import type { LoginFormData, RegisterFormData } from '../schemas';
 
 interface ApiResponse<T> {
@@ -82,4 +82,12 @@ export const authApi = {
   listPasskeys: () => apiClient.get<ApiResponse<{ passkeys: Passkey[] }>>('/auth/passkeys'),
 
   deletePasskey: (id: string) => apiClient.delete<ApiResponse<null>>(`/auth/passkeys/${id}`),
+
+  // ─── Sessions ──────────────────────────────────────────────────────────────
+
+  listSessions: () =>
+    apiClient.get<ApiResponse<{ sessions: SessionInfo[] }>>('/auth/sessions'),
+
+  revokeSession: (id: string) =>
+    apiClient.delete<ApiResponse<null>>(`/auth/sessions/${id}`),
 };

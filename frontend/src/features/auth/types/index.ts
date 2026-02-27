@@ -53,6 +53,15 @@ export interface Passkey {
   createdAt: string;
 }
 
+export interface SessionInfo {
+  id: string;
+  deviceName: string | null;
+  ipAddress: string | null;
+  lastUsedAt: string | null;
+  createdAt: string;
+  isCurrent: boolean;
+}
+
 export interface TotpSetupData {
   secret: string;
   qrCodeDataUrl: string;

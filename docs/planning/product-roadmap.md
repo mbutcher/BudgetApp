@@ -1,6 +1,6 @@
 # BudgetApp — Product Development Roadmap
 
-**Last updated:** 2026-02-26
+**Last updated:** 2026-02-27
 **Current release:** v0.1
 
 ---
@@ -499,6 +499,67 @@ Exiting edit mode (Save or clicking away) fires a single `PUT /api/v1/dashboard/
 - Hints are generated at request time and reflect the current state of the user's data
 - Dashboard layout is restored correctly after logout and re-login on a different device
 - Edit mode is accessible and functional at all four breakpoints
+
+---
+
+### Phase 20 — Settings Consolidation & User Avatar Menu
+
+**Priority:** Medium
+**Scope:** Medium
+
+Replace the current "Settings" sidebar entry and scattered settings pages with a single user avatar popup menu in the app header, grouping all user-facing configuration under three clearly-scoped sections.
+
+#### 20.1 User Avatar Popup Menu
+
+- Remove the flat "Settings" item from the sidebar navigation
+- Add a user avatar button to the top-right of the `AppLayout` header (initials or Gravatar fallback)
+- Clicking the avatar opens a `Popover` / `DropdownMenu` (Shadcn) with three top-level sections and a sign-out action:
+  - **Account** — name, contact, preferences
+  - **Integrations** — SimpleFIN, MCP server
+  - **Security** — password, 2FA, passkeys, sessions, API keys
+- Each section item navigates to its dedicated settings page (or opens an inline sheet on mobile)
+- Active section is highlighted in the menu when the user is already on that settings page
+
+#### 20.2 Account Settings Page
+
+Consolidate user identity and preference fields onto a single page (currently split across multiple settings surfaces):
+
+- **Profile:** display name, email address
+- **Preferences:** language/locale, default currency, date format, time format, timezone, start of week (currently on `PreferencesPage` — merge here)
+- Single `PATCH /auth/me` call on save; Zod validation mirrors existing `updateProfileSchema`
+
+#### 20.3 Integrations Page
+
+Single page for all third-party and agent integrations:
+
+- **SimpleFIN:** current connect/disconnect card + sync schedule configuration (moved from `SimplefinSettingsPage`)
+- **MCP Server:** enable/disable toggle for the MCP server endpoint; shows current API key(s) scoped to MCP access; quick-copy connection string for Claude Desktop / `claude` CLI config
+
+#### 20.4 Security Settings Page
+
+Consolidate all authentication and access management onto one page:
+
+- **Password:** change password form (current password + new password + confirm)
+- **Two-Factor Authentication (TOTP):** enable/disable, QR code setup, backup code regeneration (currently on `SecuritySettingsPage`)
+- **Passkeys:** list registered passkeys with device name + creation date; add new; remove (currently on `SecuritySettingsPage`)
+- **Active Sessions:** list of active refresh tokens with device name and last-seen timestamp; revoke individual or all other sessions (currently on `SecuritySettingsPage`)
+- **API Keys:** list keys with label, scopes, last-used date; create new (raw key shown once); revoke (Phase 18.1 management UI)
+
+#### 20.5 Navigation Cleanup
+
+- Delete the old `SettingsPage` shell if it only existed as a routing hub
+- Update React Router routes: `/settings/account`, `/settings/integrations`, `/settings/security`
+- Redirect legacy `/settings` and `/settings/preferences` routes to `/settings/account`
+- Update all internal links (sidebar, deep-links from other pages) to use the new routes
+- Add i18n keys for all new menu labels and section headings in all three locales
+
+#### Acceptance Criteria
+
+- Sidebar contains no Settings entry; avatar menu is the sole entry point for user configuration
+- All three settings pages render the same functionality previously spread across `PreferencesPage`, `SimplefinSettingsPage`, and `SecuritySettingsPage`
+- Deep-linking to `/settings/security` opens the correct page directly
+- Avatar menu closes on outside click and on navigation
+- Settings pages are fully translated in en-CA, en-US, and fr-CA
 
 ---
 

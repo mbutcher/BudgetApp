@@ -79,6 +79,7 @@ export function useCreateSavingsGoal() {
           id: localId,
           userId,
           accountId: data.accountId,
+          budgetLineId: data.budgetLineId ?? null,
           name: data.name,
           targetAmount: data.targetAmount,
           targetDate: data.targetDate ?? null,

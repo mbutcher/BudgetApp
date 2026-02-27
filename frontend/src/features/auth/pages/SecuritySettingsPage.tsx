@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { LogOut, LogOutIcon, Shield, Fingerprint } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { LogOut, LogOutIcon, Shield, Fingerprint, Monitor } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { authApi } from '../api/authApi';
 import { useAuthStore } from '../stores/authStore';
@@ -41,6 +41,18 @@ export function SecuritySettingsPage() {
       navigate('/login', { replace: true });
     },
   });
+
+  const { data: sessionsData, isLoading: sessionsLoading } = useQuery({
+    queryKey: ['auth-sessions'],
+    queryFn: () => authApi.listSessions().then((r) => r.data.data.sessions),
+  });
+
+  const revokeSessionMutation = useMutation({
+    mutationFn: (sessionId: string) => authApi.revokeSession(sessionId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['auth-sessions'] }),
+  });
+
+  const sessions = sessionsData ?? [];
 
   return (
     <div className="min-h-screen bg-muted/40 p-4">
@@ -137,6 +149,57 @@ export function SecuritySettingsPage() {
             <CardDescription>{t('security.sessionsDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            {/* Session list */}
+            {sessionsLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <div key={i} className="h-12 bg-muted animate-pulse rounded-md" />
+                ))}
+              </div>
+            ) : sessions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t('security.sessionsEmpty')}</p>
+            ) : (
+              <div className="space-y-2">
+                {sessions.map((session) => (
+                  <div
+                    key={session.id}
+                    className="flex items-center justify-between rounded-lg border px-3 py-2"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Monitor className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium truncate">
+                            {session.deviceName ?? 'Unknown device'}
+                          </p>
+                          {session.isCurrent && (
+                            <Badge variant="outline" className="text-xs flex-shrink-0">
+                              {t('security.sessionsThisDevice')}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {session.ipAddress ?? '—'} · {t('security.sessionsSignedIn')}{' '}
+                          {new Date(session.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    {!session.isCurrent && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive flex-shrink-0"
+                        isLoading={revokeSessionMutation.isPending}
+                        onClick={() => revokeSessionMutation.mutate(session.id)}
+                      >
+                        {t('security.sessionsSignOut')}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
             <Separator />
             <div className="flex items-center justify-between">
               <div>

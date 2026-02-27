@@ -77,6 +77,7 @@ export async function pull(since?: string): Promise<void> {
     db.transactions,
     db.budgets,
     db.budgetCategories,
+    db.budgetLines,
     db.savingsGoals,
     db.syncMeta,
   ], async () => {
@@ -88,11 +89,12 @@ export async function pull(since?: string): Promise<void> {
         db.transactions.clear(),
         db.budgets.clear(),
         db.budgetCategories.clear(),
+        db.budgetLines.clear(),
         db.savingsGoals.clear(),
       ]);
     }
 
-    // Upsert accounts, categories, budgets, budgetCategories, savingsGoals
+    // Upsert accounts, categories, budgets, budgetCategories, budgetLines, savingsGoals
     // (no sensitive fields to encrypt on these entities)
     await db.accounts.bulkPut(
       payload.accounts.map((a) => serializeDates(a as unknown as Record<string, unknown>) as unknown as typeof a)
@@ -105,6 +107,9 @@ export async function pull(since?: string): Promise<void> {
     );
     await db.budgetCategories.bulkPut(
       payload.budgetCategories.map((bc) => serializeDates(bc as unknown as Record<string, unknown>) as unknown as typeof bc)
+    );
+    await db.budgetLines.bulkPut(
+      payload.budgetLines.map((bl) => serializeDates(bl as unknown as Record<string, unknown>) as unknown as typeof bl)
     );
     await db.savingsGoals.bulkPut(
       payload.savingsGoals.map((sg) => serializeDates(sg as unknown as Record<string, unknown>) as unknown as typeof sg)

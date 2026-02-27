@@ -8,6 +8,7 @@ import { BudgetSummaryBar } from '../components/BudgetSummaryBar';
 import { BudgetLineGroup } from '../components/BudgetLineGroup';
 import { AddBudgetLineDialog } from '../components/AddBudgetLineDialog';
 import { useBudgetView, usePayPeriod } from '../hooks/useBudgetView';
+import { useBudgetLines } from '../hooks/useBudgetLines';
 import { useCategories } from '../hooks/useCategories';
 import { isOfflineError } from '@lib/db/offlineHelpers';
 import type { BudgetViewLine, Category } from '../types';
@@ -23,6 +24,7 @@ export function BudgetPage() {
   const { data: view, isLoading, isError, error } = useBudgetView(start, end);
   const { data: payPeriod } = usePayPeriod();
   const { data: allCategories = [] } = useCategories();
+  const { data: cachedLines = [] } = useBudgetLines();
 
   const handlePeriodChange = (s: string, e: string) => {
     setStart(s);
@@ -82,10 +84,27 @@ export function BudgetPage() {
 
       {/* Offline */}
       {isError && isOfflineError(error) && (
-        <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-3">
-          <WifiOff className="h-8 w-8" />
-          <p className="text-sm">{t('budget.offlineError')}</p>
-          <p className="text-xs text-gray-400">{t('budget.offlineInfo')}</p>
+        <div className="space-y-4">
+          <div className="flex flex-col items-center gap-2 py-6 text-gray-400">
+            <WifiOff className="h-7 w-7" />
+            <p className="text-sm font-medium text-gray-600">{t('budget.offlineError')}</p>
+            <p className="text-xs text-gray-400">{t('budget.offlineInfo')}</p>
+          </div>
+          {cachedLines.length > 0 && (
+            <div className="rounded-lg border border-gray-200 divide-y divide-gray-100">
+              {cachedLines
+                .filter((bl) => bl.isActive)
+                .map((bl) => (
+                  <div key={bl.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                    <span className="text-gray-800 font-medium">{bl.name}</span>
+                    <span className="text-gray-500">
+                      {bl.classification === 'income' ? '+' : '−'}
+                      {Math.abs(bl.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          )}
         </div>
       )}
 

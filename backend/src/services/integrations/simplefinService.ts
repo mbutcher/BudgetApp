@@ -2,6 +2,7 @@ import { getDatabase } from '@config/database';
 import { encryptionService } from '@services/encryption/encryptionService';
 import { simplefinApiClient } from './simplefinApiClient';
 import { simplefinRepository } from '@repositories/simplefinRepository';
+import logger from '@utils/logger';
 import { simplefinAccountMappingRepository } from '@repositories/simplefinAccountMappingRepository';
 import { simplefinPendingReviewRepository } from '@repositories/simplefinPendingReviewRepository';
 import { accountRepository } from '@repositories/accountRepository';
@@ -135,6 +136,11 @@ class SimplefinService {
 
       await simplefinRepository.updateSyncTimestamp(userId);
       await simplefinRepository.updateSyncStatus(userId, 'success');
+      void simplefinRepository
+        .pruneDiscardedIds(userId)
+        .catch((err: unknown) =>
+          logger.warn('Failed to prune discarded SimpleFIN IDs', { userId, err })
+        );
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       await simplefinRepository.updateSyncStatus(userId, 'error', message);

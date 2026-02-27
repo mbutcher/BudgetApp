@@ -13,7 +13,6 @@ function rowToConnection(row: Record<string, unknown>): SimplefinConnection {
     autoSyncIntervalHours: Number(row['auto_sync_interval_hours']),
     autoSyncWindowStart: Number(row['auto_sync_window_start']),
     autoSyncWindowEnd: Number(row['auto_sync_window_end']),
-    discardedIdsJson: row['discarded_ids_json'] ? String(row['discarded_ids_json']) : null,
     createdAt: new Date(row['created_at'] as string),
     updatedAt: new Date(row['updated_at'] as string),
   };
@@ -92,41 +91,26 @@ class SimplefinRepository {
     return updated!;
   }
 
-  async addDiscardedId(userId: string, simplefinTxId: string): Promise<void> {
-    const row = await this.db('simplefin_connections')
+  async getDiscardedIds(userId: string): Promise<string[]> {
+    const rows = await this.db('simplefin_discarded_ids')
       .where({ user_id: userId })
-      .select('discarded_ids_json')
-      .first();
-    if (!row) return;
-
-    let existing: string[] = [];
-    if (row['discarded_ids_json']) {
-      try {
-        existing = JSON.parse(row['discarded_ids_json'] as string) as string[];
-      } catch {
-        existing = [];
-      }
-    }
-
-    if (!existing.includes(simplefinTxId)) {
-      existing.push(simplefinTxId);
-      await this.db('simplefin_connections')
-        .where({ user_id: userId })
-        .update({ discarded_ids_json: JSON.stringify(existing) });
-    }
+      .select('sfin_id');
+    return rows.map((r: Record<string, unknown>) => r['sfin_id'] as string);
   }
 
-  async getDiscardedIds(userId: string): Promise<string[]> {
-    const row = await this.db('simplefin_connections')
+  async addDiscardedId(userId: string, sfinId: string): Promise<void> {
+    await this.db.raw(
+      'INSERT IGNORE INTO simplefin_discarded_ids (id, user_id, sfin_id) VALUES (?, ?, ?)',
+      [randomUUID(), userId, sfinId]
+    );
+  }
+
+  /** Deletes discarded ID rows older than 90 days for the given user. */
+  async pruneDiscardedIds(userId: string): Promise<void> {
+    await this.db('simplefin_discarded_ids')
       .where({ user_id: userId })
-      .select('discarded_ids_json')
-      .first();
-    if (!row || !row['discarded_ids_json']) return [];
-    try {
-      return JSON.parse(row['discarded_ids_json'] as string) as string[];
-    } catch {
-      return [];
-    }
+      .where('discarded_at', '<', this.db.raw('DATE_SUB(NOW(), INTERVAL 90 DAY)'))
+      .delete();
   }
 
   async deleteConnection(userId: string): Promise<void> {

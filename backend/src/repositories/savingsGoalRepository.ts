@@ -11,6 +11,7 @@ function rowToGoal(row: Record<string, unknown>): SavingsGoal {
     id: row['id'] as string,
     userId: row['user_id'] as string,
     accountId: row['account_id'] as string,
+    budgetLineId: (row['budget_line_id'] as string | null) ?? null,
     name: row['name'] as string,
     targetAmount: Number(row['target_amount']),
     targetDate: (row['target_date'] as string | null) ?? null,
@@ -42,6 +43,7 @@ class SavingsGoalRepository {
       id,
       user_id: data.userId,
       account_id: data.accountId,
+      budget_line_id: data.budgetLineId ?? null,
       name: data.name,
       target_amount: data.targetAmount,
       target_date: data.targetDate ?? null,
@@ -59,6 +61,7 @@ class SavingsGoalRepository {
     if (data.name !== undefined) updates['name'] = data.name;
     if (data.targetAmount !== undefined) updates['target_amount'] = data.targetAmount;
     if (data.targetDate !== undefined) updates['target_date'] = data.targetDate;
+    if (data.budgetLineId !== undefined) updates['budget_line_id'] = data.budgetLineId;
 
     if (Object.keys(updates).length === 0) return this.findById(userId, goalId);
 

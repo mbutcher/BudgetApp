@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
 import { useAccounts } from '../hooks/useAccounts';
+import { useBudgetLines } from '../hooks/useBudgetLines';
 import {
   useSavingsGoals,
   useSavingsGoalProgress,
@@ -17,6 +18,7 @@ import type { SavingsGoal } from '../types';
 
 const goalSchema = z.object({
   accountId: z.string().uuid('Select an account'),
+  budgetLineId: z.string().optional(),
   name: z.string().min(1, 'Name is required').max(255),
   targetAmount: z.number().positive('Target must be positive'),
   targetDate: z.string().optional(),
@@ -37,6 +39,7 @@ function GoalForm({
 }) {
   const { t } = useTranslation();
   const { data: accounts = [] } = useAccounts();
+  const { data: budgetLines = [] } = useBudgetLines();
   const createGoal = useCreateSavingsGoal();
   const updateGoal = useUpdateSavingsGoal(goal?.id ?? '');
 
@@ -48,6 +51,7 @@ function GoalForm({
     resolver: zodResolver(goalSchema),
     defaultValues: {
       accountId: goal?.accountId ?? '',
+      budgetLineId: goal?.budgetLineId ?? '',
       name: goal?.name ?? '',
       targetAmount: goal?.targetAmount ?? 0,
       targetDate: goal?.targetDate ?? '',
@@ -55,24 +59,34 @@ function GoalForm({
   });
 
   const onSubmit = (values: GoalFormValues) => {
-    const data = {
-      accountId: values.accountId,
-      name: values.name,
-      targetAmount: values.targetAmount,
-      targetDate: values.targetDate || undefined,
-    };
+    const budgetLineId = values.budgetLineId || null;
 
     if (goal) {
       updateGoal.mutate(
-        { name: data.name, targetAmount: data.targetAmount, targetDate: data.targetDate ?? null },
+        {
+          name: values.name,
+          targetAmount: values.targetAmount,
+          targetDate: values.targetDate || null,
+          budgetLineId,
+        },
         { onSuccess }
       );
     } else {
-      createGoal.mutate(data, { onSuccess });
+      createGoal.mutate(
+        {
+          accountId: values.accountId,
+          budgetLineId,
+          name: values.name,
+          targetAmount: values.targetAmount,
+          targetDate: values.targetDate || undefined,
+        },
+        { onSuccess }
+      );
     }
   };
 
   const isPending = createGoal.isPending || updateGoal.isPending;
+  const incomeBudgetLines = budgetLines.filter((bl) => bl.isActive && bl.classification === 'income');
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -138,6 +152,25 @@ function GoalForm({
         </div>
       </div>
 
+      {incomeBudgetLines.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {t('savingsGoals.budgetLine')}
+          </label>
+          <select
+            {...register('budgetLineId')}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+          >
+            <option value="">{t('savingsGoals.budgetLinePlaceholder')}</option>
+            {incomeBudgetLines.map((bl) => (
+              <option key={bl.id} value={bl.id}>
+                {bl.name} (${bl.amount.toFixed(2)} / {bl.frequency})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <div className="flex gap-3">
         <button
           type="submit"
@@ -167,7 +200,12 @@ function GoalForm({
 function GoalCard({ goal, onEdit }: { goal: SavingsGoal; onEdit: (goal: SavingsGoal) => void }) {
   const { t } = useTranslation();
   const { data: progress } = useSavingsGoalProgress(goal.id);
+  const { data: budgetLines = [] } = useBudgetLines();
   const deleteGoal = useDeleteSavingsGoal();
+
+  const linkedBudgetLine = goal.budgetLineId
+    ? budgetLines.find((bl) => bl.id === goal.budgetLineId)
+    : null;
 
   const pct = progress?.percentComplete ?? 0;
   const current = progress?.currentAmount ?? 0;
@@ -182,6 +220,11 @@ function GoalCard({ goal, onEdit }: { goal: SavingsGoal; onEdit: (goal: SavingsG
           <h3 className="text-sm font-semibold text-gray-900">{goal.name}</h3>
           {goal.targetDate && (
             <p className="text-xs text-gray-400 mt-0.5">Target: {goal.targetDate}</p>
+          )}
+          {linkedBudgetLine && (
+            <p className="text-xs text-blue-500 mt-0.5">
+              {t('savingsGoals.linkedBudgetLine', { name: linkedBudgetLine.name })}
+            </p>
           )}
         </div>
         <div className="flex gap-2 text-xs">

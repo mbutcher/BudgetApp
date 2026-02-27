@@ -284,6 +284,8 @@ export interface SavingsGoal {
   id: string;
   userId: string;
   accountId: string;
+  /** Optional link to a budget line — used to derive projected completion rate. */
+  budgetLineId: string | null;
   name: string;
   targetAmount: number;
   targetDate: string | null; // YYYY-MM-DD
@@ -294,6 +296,7 @@ export interface SavingsGoal {
 export interface CreateSavingsGoalData {
   userId: string;
   accountId: string;
+  budgetLineId?: string | null;
   name: string;
   targetAmount: number;
   targetDate?: string;
@@ -303,6 +306,7 @@ export interface UpdateSavingsGoalData {
   name?: string;
   targetAmount?: number;
   targetDate?: string | null;
+  budgetLineId?: string | null;
 }
 
 export interface SavingsGoalProgress {
@@ -604,8 +608,6 @@ export interface SimplefinConnection {
   autoSyncIntervalHours: number;
   autoSyncWindowStart: number; // Hour 0–23
   autoSyncWindowEnd: number; // Hour 0–23
-  /** JSON array of SimpleFIN tx IDs the user discarded (stored as string, parsed in service) */
-  discardedIdsJson: string | null;
   createdAt: Date;
   updatedAt: Date;
   // NOTE: accessUrlEncrypted is stored in DB but NEVER included in this interface
@@ -672,6 +674,7 @@ export interface SyncPayload {
   transactions: PublicTransaction[];
   budgets: Budget[];
   budgetCategories: BudgetCategory[];
+  budgetLines: BudgetLine[];
   savingsGoals: SavingsGoal[];
   /** ISO 8601 timestamp — client stores this as the cursor for the next delta sync */
   syncedAt: string;

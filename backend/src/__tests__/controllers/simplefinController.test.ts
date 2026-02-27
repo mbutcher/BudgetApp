@@ -45,7 +45,6 @@ const mockConnection = {
   autoSyncIntervalHours: 24,
   autoSyncWindowStart: 0,
   autoSyncWindowEnd: 23,
-  discardedIdsJson: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };

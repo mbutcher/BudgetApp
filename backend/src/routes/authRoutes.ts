@@ -76,4 +76,8 @@ router.post(
 router.get('/passkeys', authenticate, authController.listPasskeys);
 router.delete('/passkeys/:id', authenticate, authController.deletePasskey);
 
+// ─── Session management ───────────────────────────────────────────────────────
+router.get('/sessions', authenticate, authController.listSessions);
+router.delete('/sessions/:id', authenticate, authController.revokeSession);
+
 export default router;

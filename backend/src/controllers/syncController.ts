@@ -8,6 +8,7 @@ import type {
   PublicTransaction,
   Budget,
   BudgetCategory,
+  BudgetLine,
   SavingsGoal,
 } from '@typings/core.types';
 
@@ -37,7 +38,7 @@ class SyncController {
 
     const db = getDatabase();
 
-    const [accountRows, categoryRows, txRows, budgetRows, budgetCategoryRows, goalRows] =
+    const [accountRows, categoryRows, txRows, budgetRows, budgetCategoryRows, budgetLineRows, goalRows] =
       await Promise.all([
         since
           ? db('accounts').where({ user_id: userId }).where('updated_at', '>=', since)
@@ -65,6 +66,10 @@ class SyncController {
               .join('budgets as b', 'bc.budget_id', 'b.id')
               .where('b.user_id', userId)
               .select('bc.*'),
+
+        since
+          ? db('budget_lines').where({ user_id: userId }).where('updated_at', '>=', since)
+          : db('budget_lines').where({ user_id: userId }),
 
         since
           ? db('savings_goals').where({ user_id: userId }).where('updated_at', '>=', since)
@@ -140,10 +145,33 @@ class SyncController {
       updatedAt: new Date(String(r['updated_at'])),
     }));
 
+    const budgetLines: BudgetLine[] = (budgetLineRows as Record<string, unknown>[]).map((r) => ({
+      id: String(r['id']),
+      userId: String(r['user_id']),
+      name: String(r['name']),
+      classification: r['classification'] as BudgetLine['classification'],
+      flexibility: r['flexibility'] as BudgetLine['flexibility'],
+      categoryId: String(r['category_id']),
+      subcategoryId: r['subcategory_id'] != null ? String(r['subcategory_id']) : null,
+      accountId: r['account_id'] != null ? String(r['account_id']) : null,
+      amount: Number(r['amount']),
+      frequency: r['frequency'] as BudgetLine['frequency'],
+      frequencyInterval: r['frequency_interval'] != null ? Number(r['frequency_interval']) : null,
+      dayOfMonth1: r['day_of_month_1'] != null ? Number(r['day_of_month_1']) : null,
+      dayOfMonth2: r['day_of_month_2'] != null ? Number(r['day_of_month_2']) : null,
+      anchorDate: String(r['anchor_date']),
+      isPayPeriodAnchor: Boolean(r['is_pay_period_anchor']),
+      isActive: Boolean(r['is_active']),
+      notes: r['notes'] != null ? String(r['notes']) : null,
+      createdAt: new Date(String(r['created_at'])),
+      updatedAt: new Date(String(r['updated_at'])),
+    }));
+
     const savingsGoals: SavingsGoal[] = (goalRows as Record<string, unknown>[]).map((r) => ({
       id: String(r['id']),
       userId: String(r['user_id']),
       accountId: String(r['account_id']),
+      budgetLineId: r['budget_line_id'] != null ? String(r['budget_line_id']) : null,
       name: String(r['name']),
       targetAmount: Number(r['target_amount']),
       targetDate: r['target_date'] != null ? String(r['target_date']) : null,
@@ -159,6 +187,7 @@ class SyncController {
         transactions,
         budgets,
         budgetCategories,
+        budgetLines,
         savingsGoals,
         syncedAt: new Date().toISOString(),
       },

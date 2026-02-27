@@ -394,6 +394,8 @@ export interface SavingsGoal {
   id: string;
   userId: string;
   accountId: string;
+  /** Optional link to a budget line — used to derive projected completion rate. */
+  budgetLineId: string | null;
   name: string;
   targetAmount: number;
   targetDate: string | null;
@@ -403,6 +405,7 @@ export interface SavingsGoal {
 
 export interface CreateSavingsGoalInput {
   accountId: string;
+  budgetLineId?: string | null;
   name: string;
   targetAmount: number;
   targetDate?: string;
@@ -412,6 +415,7 @@ export interface UpdateSavingsGoalInput {
   name?: string;
   targetAmount?: number;
   targetDate?: string | null;
+  budgetLineId?: string | null;
 }
 
 export interface SavingsGoalProgress {
@@ -433,6 +437,7 @@ export interface SyncPayload {
   transactions: Transaction[];
   budgets: Budget[];
   budgetCategories: BudgetCategory[];
+  budgetLines: BudgetLine[];
   savingsGoals: SavingsGoal[];
   syncedAt: string;
 }
