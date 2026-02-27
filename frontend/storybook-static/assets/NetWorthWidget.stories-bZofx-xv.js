@@ -1,0 +1,20 @@
+import{j as e}from"./jsx-runtime-DFAAy_2V.js";import{Q as T}from"./QueryClientProvider-Lm9Is62K.js";import{u as D}from"./useAccounts-BCtARCSZ.js";import{b as L}from"./useReports-DgSApoVl.js";import{u as I}from"./useFormatters-DFQvbmp2.js";import{u as E}from"./useTranslation-CriaNoZI.js";import{c as W}from"./createLucideIcon-B9d3ud5S.js";import{h as S,c as _}from"./mockData-K9D4SkBR.js";import{Q as q}from"./queryClient-DqSsX_cv.js";import"./index-Bc2G9s8g.js";import"./useQuery-CIXANqNG.js";import"./query-DzksRMPg.js";import"./client-BtbUihLd.js";import"./authStore-9rPuOrgm.js";import"./index-6pVCHIeC.js";import"./index-XZO_rlAO.js";import"./offlineHelpers-pC_97PH_.js";import"./networkStore-BALze3A1.js";import"./context-DY79RVi1.js";import"./mutation-DGDFf7lc.js";/**
+ * @license lucide-react v0.424.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const C=W("TrendingDown",[["polyline",{points:"22 17 13.5 8.5 8.5 13.5 2 7",key:"1r2t7k"}],["polyline",{points:"16 17 22 17 22 11",key:"11uiuu"}]]);/**
+ * @license lucide-react v0.424.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const H=W("TrendingUp",[["polyline",{points:"22 7 13.5 15.5 8.5 10.5 2 17",key:"126l90"}],["polyline",{points:"16 7 22 7 22 13",key:"kwv8wd"}]]);function b({excludedAccountIds:r}){const{t:s}=E(),{currency:t}=I(),{data:A=[],isLoading:Q}=D(),{data:d}=L(2),m=A.filter(n=>n.isActive&&!r.includes(n.id)).reduce((n,p)=>n+(p.isAsset?p.currentBalance:-p.currentBalance),0),l=(d==null?void 0:d.snapshots)??[],h=l.length>=2?l[l.length-2]:null,o=h?m-h.netWorth:null;return Q?e.jsxs("div",{className:"h-full flex flex-col justify-center p-5",children:[e.jsx("div",{className:"h-4 w-24 bg-gray-100 animate-pulse rounded mb-2"}),e.jsx("div",{className:"h-8 w-36 bg-gray-100 animate-pulse rounded"})]}):e.jsxs("div",{className:"h-full flex flex-col justify-center p-5",children:[e.jsx("p",{className:"text-sm text-gray-500 mb-1",children:s("dashboard.netWorth")}),e.jsx("p",{className:`text-3xl font-bold tabular-nums ${m>=0?"text-gray-900":"text-red-600"}`,children:t(m)}),o!==null&&e.jsxs("div",{className:`mt-2 flex items-center gap-1 text-sm ${o>=0?"text-green-600":"text-red-500"}`,children:[o>=0?e.jsx(H,{className:"h-4 w-4"}):e.jsx(C,{className:"h-4 w-4"}),e.jsxs("span",{children:[o>=0?"+":"",t(o)," ",s("dashboard.vsPrevPeriod")]})]})]})}b.__docgenInfo={description:"",methods:[],displayName:"NetWorthWidget",props:{excludedAccountIds:{required:!0,tsType:{name:"Array",elements:[{name:"string"}],raw:"string[]"},description:""}}};function P(r,s){const t=new q({defaultOptions:{queries:{retry:!1,staleTime:1/0}}});return r!==void 0&&t.setQueryData(["accounts"],r),s!==void 0&&t.setQueryData(["reports","net-worth",2],s),t}const u=(r,s)=>t=>e.jsx(T,{client:P(r,s),children:e.jsx("div",{style:{width:380,height:200},children:e.jsx(t,{})})}),ae={component:b,title:"Dashboard/NetWorthWidget",args:{excludedAccountIds:[]}},a={decorators:[u(_,S)]},c={decorators:[u()]},i={decorators:[u([],{snapshots:[],latest:null})]};var x,f,y;a.parameters={...a.parameters,docs:{...(x=a.parameters)==null?void 0:x.docs,source:{originalSource:`{
+  decorators: [withData(mockAccounts, mockNetWorthHistory)]
+}`,...(y=(f=a.parameters)==null?void 0:f.docs)==null?void 0:y.source}}};var g,j,v;c.parameters={...c.parameters,docs:{...(g=c.parameters)==null?void 0:g.docs,source:{originalSource:`{
+  decorators: [withData()]
+}`,...(v=(j=c.parameters)==null?void 0:j.docs)==null?void 0:v.source}}};var w,N,k;i.parameters={...i.parameters,docs:{...(w=i.parameters)==null?void 0:w.docs,source:{originalSource:`{
+  decorators: [withData([], {
+    snapshots: [],
+    latest: null
+  })]
+}`,...(k=(N=i.parameters)==null?void 0:N.docs)==null?void 0:k.source}}};const ce=["Loaded","Loading","Empty"];export{i as Empty,a as Loaded,c as Loading,ce as __namedExportsOrder,ae as default};
