@@ -1,91 +1,159 @@
 # BudgetApp — Product Roadmap v0.3
 
-**Last updated:** 2026-02-26
+**Last updated:** 2026-02-28
 **Previous release:** [v0.2](./product-roadmap.md)
 
 ---
 
 ## Vision
 
-v0.3 focuses on completing the reporting surface, enabling data portability, tightening the savings-goal and budget-line model, and hardening the production deployment story. It also introduces the recurring transaction engine that was deferred from v0.1.
+v0.3 focuses on developer experience, design quality, feature completeness, and the foundational shift to multi-user household support. It opens with Storybook (component library + interaction tests), followed by a theme preset system and design refresh, and a full dashboard widget revision pass. Multi-user household support (Phase 10) is built in parallel — backend first alongside Phases 1–3, frontend wired up after Phase 2. Reporting, tagging, rollover handling, and PWA improvements round out the release. Data export tools are on the wish list with no active development planned.
+
+> **Recurring Transactions removed:** Phase 13.2 was cut. Budget lines cover the forecasting use case; SimpleFIN covers real transaction ingestion. Auto-generating real transactions via cron creates duplication risk with no meaningful gain. All backend/frontend recurring transaction code will be fully deleted and the `recurring_transactions` table dropped via a new migration.
 
 ---
 
-## Carried Forward from v0.2
-
-### Phase 13 — Top Payees & Recurring Transactions
+## Phase 1 — Storybook Integration
 
 **Priority:** High
 **Scope:** Medium
 
-#### 13.1 Top Payees Report
+#### 1.1 Storybook Setup
+
+- Install `@storybook/react-vite`, `@storybook/test`, `@storybook/addon-interactions`, `@storybook/addon-essentials`
+- `.storybook/main.ts`: Vite builder with all 8 path alias mappings from `vite.config.ts`
+- `.storybook/preview.ts`: Tailwind global import, `I18nextProvider` decorator, `QueryClientProvider` decorator (fresh client per story), `ThemeProvider` decorator, viewport presets (mobile/tablet/desktop)
+- Add `storybook`, `build-storybook`, and `test-storybook` scripts to `frontend/package.json`
+
+#### 1.2 UI Primitive Stories (`src/components/ui/`)
+
+Stories for all 11 Shadcn components with interaction tests (`@storybook/test`):
+- `button` — variants, sizes, disabled, loading
+- `input` — placeholder, with label, error, disabled
+- `card` — with/without header/footer
+- `dialog` — open/closed, with form content; interaction test
+- `badge` — all colour variants
+- `alert` — info/warning/error
+- `tabs` — multi-tab; interaction test for tab switching
+- `dropdown-menu` — trigger, items, disabled items; interaction test
+- `form-field` — label + input + error composition
+- `separator` — horizontal/vertical
+- `label` — standalone, with `htmlFor`
+
+#### 1.3 Chart & Layout Component Stories
+
+- `MonthlyChart` — 6-month mock data, with/without forecast, empty
+- `NetWorthChart` — positive trend, negative trend, flat
+- `SpendingPieChart` — multi-category, single, empty
+- `TopPayeesBarChart` — top 5 payees, empty
+- `AccountCard` — asset/liability/credit/negative balance states
+- `UserAvatarMenu` — closed/opened; interaction test for menu navigation
+
+#### 1.4 Dashboard Widget Stories (`src/features/dashboard/widgets/`)
+
+Each widget story mocks its custom hooks (no real API calls) and covers loaded, loading, and empty/error states. Interaction tests where applicable (e.g., WarningsWidget collapse/expand, MonthlyChartWidget forecast toggle).
+
+#### Acceptance Criteria
+
+- `npm run storybook` starts without errors; all stories render
+- `npm run test-storybook` — all interaction tests pass
+- Path aliases, Tailwind, and i18n work correctly in all stories
+- No story makes real network requests
+
+---
+
+## Phase 2 — Theme Presets & Design Refresh
+
+**Priority:** High
+**Scope:** Medium
+
+#### 2.1 CSS Custom Property Theme System
+
+- Refactor Tailwind config to use CSS custom properties (`--color-primary`, `--color-surface`, `--color-muted`, etc.) instead of hardcoded palette values
+- Define 5 curated theme presets applied via `data-theme="<name>"` on `<html>`:
+  - **Default** (current design — starting reference)
+  - **Slate** (cool grey/blue tones)
+  - **Forest** (green accents)
+  - **Warm** (amber/terracotta accents)
+  - **Midnight** (darker surface, high-contrast accents)
+- Theme stored in `user_preferences` (backend) and mirrored to `localStorage` for instant load without flash
+- `ThemeProvider` React context applies `data-theme` and listens for preference changes
+
+#### 2.2 Theme Picker in Account Settings
+
+- "Appearance" card in `AccountSettingsPage` with a visual grid of theme swatches
+- Selection calls `PATCH /api/v1/auth/me/preferences` (existing endpoint)
+- i18n keys added to all 3 locales
+
+#### 2.3 One-Time Design Refresh
+
+- Audit and tune default spacing, font sizing, and padding across: navigation sidebar, table rows, card components, widget headers
+- No user-facing toggle — improved baseline aesthetic only
+- Update Storybook stories after refresh so they reflect the new visual baseline
+
+#### Acceptance Criteria
+
+- All 5 themes render without style leakage between switches
+- Theme persists across page refresh and new sessions
+- Design refresh passes visual review across all major pages at `lg` breakpoint
+- Storybook stories updated to match refreshed design
+
+---
+
+## Phase 3 — Dashboard Widget Revisions
+
+**Priority:** High
+**Scope:** Medium
+**Dependency:** Phase 1 (Storybook) — iterate widget designs in isolation before integration
+
+#### 3.1 New Widgets
+
+- **SpendingByCategoryWidget** — Pie/bar toggle showing category spend for the current period; reuses `SpendingPieChart`; powered by budget-view actuals or reports endpoint
+- **DebtPayoffWidget** — Per-debt-account card showing principal, interest paid to date, and projected payoff date; powered by existing `useDebt()` hook
+- **TagSummaryWidget** *(Phase 5 dependency)* — Horizontal bar chart of spend by tag; registered in widgetRegistry but gated by `featureFlag: 'tagging'` until Phase 5 ships
+
+#### 3.2 Existing Widget Redesigns
+
+- **AccountBalancesWidget**: Compact grid of balance cards with account type icon/badge; negative balances highlighted in red
+- **BudgetSnapshotWidget**: Horizontal stacked bar (spent / remaining / over-budget) replaces single progress bar; over-budget categories as inline chips
+- **MonthlyChartWidget**: Stacked area chart (income vs. expenses) replaces grouped bars; period selector (3 / 6 / 12 months)
+- **NetWorthWidget**: Sparkline over last 6 months plus current total, colour-coded by positive/negative trend
+- **RecentTransactionsWidget**: Category badge + account name per row; rows are clickable links; debit/credit colour coding
+- **UpcomingExpensesWidget**: Built out from placeholder — lists budget line occurrences in the next 30 days grouped by week with amount and account
+- **SavingsGoalsWidget**: Projected completion date alongside progress bar; goals behind pace highlighted in amber
+
+#### 3.3 Widget Grid UX
+
+- Update `DEFAULT_LAYOUTS` in `widgetRegistry.ts` to accommodate new widgets
+- Add `minH` / `minW` constraints so widgets can't be shrunk below readability thresholds
+- WidgetTray: group widgets by category (Overview, Budgeting, Savings, Spending, Debt)
+
+#### Acceptance Criteria
+
+- All 3 new widgets appear in WidgetTray and can be added to the dashboard
+- All redesigned widgets render correctly across xs/sm/lg/xl breakpoints
+- Widget Storybook stories updated to match new designs
+- Existing saved dashboard configs load cleanly — no breaking changes to `DashboardConfig` schema
+
+---
+
+## Phase 4 — Top Payees Report
+
+**Priority:** Medium
+**Scope:** Small
 
 - Bar chart: top N payees by total spend for a configurable period
 - Payee field is AES-256-GCM encrypted — aggregate at query time by decrypting in the service layer (acceptable for single-user, small dataset)
 - `GET /api/v1/reports/top-payees?start=&end=&limit=10` endpoint
 - Drill-down to transaction list for a selected payee
 
-#### 13.2 Recurring Transactions
-
-- `recurring_transactions` table exists; auto-generation cron was disabled pending design review
-- Define idempotency strategy: advance `next_due_date` after generation (prevent duplicate generation on cron restart)
-- Re-enable `recurringTransactionService` and `recurringTransactionScheduler` in `index.ts`
-- UI: create/edit/pause/delete recurring transactions; "Skip this occurrence" action
-
 #### Acceptance Criteria
 
 - Top payees chart matches sum of transactions for the period
-- Recurring transactions generated on schedule without duplication across server restarts
 
 ---
 
-### Phase 15 — Export & Attachments
-
-**Priority:** Medium
-**Scope:** Medium
-
-#### 15.1 CSV / OFX Export
-
-- `GET /api/v1/transactions/export?format=csv&start=&end=` — streams CSV with decrypted payee/description; rate-limited and scoped to requesting user
-- OFX format export for import into Quicken/Mint
-- Download button on TransactionsPage with format selector and date range picker
-
-#### 15.2 Receipt Attachments
-
-- Photo attachment upload per transaction; stored encrypted (AES-256-GCM) in MinIO/S3-compatible object storage
-- `transaction_attachments` table: `transaction_id`, `storage_key`, `mime_type`, `size_bytes`
-- Thumbnail preview on transaction detail; download button
-- Docker Compose dev environment extended with MinIO service
-
----
-
-### Phase 17.3 — Savings Goal ↔ Budget Line Link
-
-**Priority:** Low
-**Scope:** Small
-
-- Add `recurring_contribution_budget_line_id` FK on `savings_goals`
-- Budget Line contributions automatically tracked against goal progress
-- `savings_goals` table exists; FK can be added non-breakingly
-- Progress bar on SavingsGoalPage reflects scheduled contributions in addition to current balance
-
----
-
-### Phase 17.6 — Production Deployment Guide
-
-**Priority:** Low
-**Scope:** Small
-
-- Step-by-step Unraid Community Application template documentation
-- Docker Compose prod profile validation with HTTPS/TLS via Let's Encrypt or reverse proxy
-- Backup/restore procedure for MariaDB volumes and MinIO data
-- Health check endpoint documentation (`GET /health`)
-
----
-
-## New in v0.3
-
-### Phase 21 — Transaction Tagging & Notes
+## Phase 5 — Transaction Tagging
 
 **Priority:** Medium
 **Scope:** Small
@@ -97,6 +165,7 @@ Allow freeform tags on transactions for cross-category grouping (e.g., "vacation
 - Filter by tag in TransactionsPage filter bar
 - `GET /api/v1/transactions?tag=vacation` endpoint filter
 - Tag summary in Reports: total spend per tag for a date range
+- Unlocks **TagSummaryWidget** in Phase 3 (remove `featureFlag` guard after this phase ships)
 
 #### Acceptance Criteria
 
@@ -106,19 +175,19 @@ Allow freeform tags on transactions for cross-category grouping (e.g., "vacation
 
 ---
 
-### Phase 22 — Budget Period Rollover & Carry-Forward
+## Phase 6 — Budget Period Rollover & Carry-Forward
 
 **Priority:** Medium
 **Scope:** Medium
 
 When a budget period ends, surface unspent variable amounts and overspent categories for conscious carry-forward decisions rather than silently resetting.
 
-#### 22.1 Rollover Detection
+#### 6.1 Rollover Detection
 
 - At pay period boundary, compute surplus/deficit per flexible budget line vs. actual spend
 - `GET /api/v1/budget-view/rollover?previousStart=&previousEnd=` — returns per-line variance summary
 
-#### 22.2 Carry-Forward UI
+#### 6.2 Carry-Forward UI
 
 - Dashboard warning widget surfaces "X budget period ended with unreviewed rollover"
 - Rollover review dialog: list over/under lines, let user optionally create a one-time adjustment transaction
@@ -132,20 +201,32 @@ When a budget period ends, surface unspent variable amounts and overspent catego
 
 ---
 
-### Phase 23 — Mobile App Companion (PWA Enhancement)
+## Phase 7 — Savings Goal ↔ Budget Line Link
+
+**Priority:** Low
+**Scope:** Small
+
+- Add `recurring_contribution_budget_line_id` FK on `savings_goals`
+- Budget Line contributions automatically tracked against goal progress
+- `savings_goals` table exists; FK can be added non-breakingly
+- Progress bar on SavingsGoalPage reflects scheduled contributions in addition to current balance
+
+---
+
+## Phase 8 — Mobile App Companion (PWA Enhancement)
 
 **Priority:** Low
 **Scope:** Large
 
 Improve the PWA experience specifically for mobile use cases.
 
-#### 23.1 Quick-Add Transaction
+#### 8.1 Quick-Add Transaction
 
 - Floating action button on mobile (`xs`/`sm` breakpoints) → bottom sheet with minimal transaction form (amount, payee, account, category)
 - Pre-fills date to today; opens full form if more detail needed
 - Queues offline if no connection
 
-#### 23.2 Push Notifications (optional)
+#### 8.2 Push Notifications (optional)
 
 - `PushManager` subscription stored per device session
 - Notification triggers: upcoming bill within 24 h, SimpleFIN sync error, savings goal deadline in 7 days
@@ -160,15 +241,127 @@ Improve the PWA experience specifically for mobile use cases.
 
 ---
 
+## Phase 9 — Production Deployment Guide
+
+**Priority:** Low
+**Scope:** Small
+
+- Step-by-step Unraid Community Application template documentation
+- Docker Compose prod profile validation with HTTPS/TLS via Let's Encrypt or reverse proxy
+- Backup/restore procedure for MariaDB volumes
+- Health check endpoint documentation (`GET /health`)
+
+---
+
+## Phase 10 — Multi-User Household Support
+
+**Priority:** High
+**Scope:** Large
+**Build order:** Backend (Phase 10.1) runs in parallel with Phases 1–3; Frontend (Phase 10.2) wired up after Phase 2
+
+One household per deployment. The first registered user creates and names the household; thereafter registration is locked — new members are added directly by the owner. Each user can share any of their accounts with household members at a configurable access level. Categories become household-wide.
+
+#### 10.1 Backend: Data Model & API
+
+**New tables:**
+- `households` — `id`, `name`, `created_at`, `updated_at`
+- `household_members` — `id`, `household_id`, `user_id` (UNIQUE), `role ENUM('owner','member')`, `joined_at`
+- `account_shares` — `id`, `account_id`, `shared_with_user_id`, `access_level ENUM('view','write')`, UNIQUE(`account_id`, `shared_with_user_id`)
+
+**Modified tables:**
+- `categories` — drop `user_id`; add `household_id FK → households`; data migration sets `household_id` from existing user's new household
+
+**Registration guard:** `authService.register()` checks `SELECT COUNT(*) FROM households`. If > 0, throws 403. After first registration, returns `householdSetupRequired: true` on the user object.
+
+**New endpoints:**
+- `GET /api/v1/auth/registration-status` *(no auth)* — `{ registrationOpen: boolean }`
+- `POST /api/v1/household/setup` — creates household, adds requesting user as owner, migrates categories
+- `GET /api/v1/household` — household info + member list
+- `POST /api/v1/household/members` — owner creates a new member account with optional account shares
+- `DELETE /api/v1/household/members/:userId` — owner removes member; cleans up shares, deactivates account
+- `PATCH /api/v1/household` — rename household (owner only)
+- `GET /api/v1/accounts/:id/shares` — list account shares (account owner only)
+- `PUT /api/v1/accounts/:id/shares` — bulk replace account shares
+- `PATCH /api/v1/accounts/:id/shares/:userId` — update one share's access level
+
+**Query changes:** All account-scoped repository queries updated to include shared accounts:
+```sql
+WHERE (a.user_id = :userId OR EXISTS (
+  SELECT 1 FROM account_shares s
+  WHERE s.account_id = a.id AND s.shared_with_user_id = :userId
+))
+```
+Write mutations on shared accounts additionally verify `access_level = 'write'`.
+Category queries switch from `user_id = :userId` to `household_id = :householdId`.
+
+New middleware: `requireHouseholdRole('owner' | 'member')` — guards owner-only routes.
+
+#### 10.2 Frontend: Household UI
+
+**First-run flow:**
+- `/setup` route (HouseholdSetupPage) — accessible only when `user.householdSetupRequired = true`
+- After household name is submitted, redirect to dashboard; flag cleared on user object
+
+**Login page:**
+- Calls `GET /registration-status` on mount; shows "Get Started" button only when `registrationOpen: true`
+- After household exists, login page shows no sign-up link
+
+**Settings → Household:**
+- New `/settings/household` page — household name (editable by owner), member list, "Add Member" button
+- Add Member dialog: email + display name + password + account access selector (per-account: None / View / Write, with "Select All View" and "Select All Write" buttons)
+
+**Account sharing:**
+- AccountCard: shared accounts show "Shared" badge + owner's name
+- Share icon in account actions → AccountShareDialog (per-member access level controls)
+- AccountsPage groups accounts: "My Accounts" + "Shared with Me" sections
+
+**Shared data visibility:**
+- TransactionsPage: transactions on shared accounts visible; owner name shown on shared account rows
+- Categories: fetched by household — no per-user filtering
+
+#### Acceptance Criteria
+
+- Fresh deployment: registration open, first user registers, household setup page appears
+- After household setup: `/register` returns 403; login page shows no sign-up link
+- Owner adds a member with View access on account A and Write access on account B
+- New member logs in: sees accounts A and B; can add transactions to B but not A
+- Owner removes member: account_shares cleaned up; member account deactivated
+- Existing data unaffected — all single-user queries still return correct results
+
+---
+
+## Wish List — Export & Attachments
+
+**Priority:** Deferred (no active development planned)
+**Scope:** Medium
+
+#### CSV / OFX Export
+
+- `GET /api/v1/transactions/export?format=csv&start=&end=` — streams CSV with decrypted payee/description; rate-limited and scoped to requesting user
+- OFX format export for import into Quicken/Mint
+- Download button on TransactionsPage with format selector and date range picker
+
+#### Receipt Attachments
+
+- Photo attachment upload per transaction; stored encrypted (AES-256-GCM) in MinIO/S3-compatible object storage
+- `transaction_attachments` table: `transaction_id`, `storage_key`, `mime_type`, `size_bytes`
+- Thumbnail preview on transaction detail; download button
+- Docker Compose dev environment extended with MinIO service
+
+---
+
 ## Technical Debt Candidates for v0.3
 
 | Item | Priority | Notes |
 |------|----------|-------|
-| Recurring transaction cron idempotency | High | Prerequisite for Phase 13.2 |
-| MinIO/S3 integration for attachments | Medium | Prerequisite for Phase 15.2 |
-| OpenAPI coverage for new v0.3 endpoints | Medium | Maintain full spec coverage |
-| E2E tests for export and recurring flows | Medium | Extend Playwright suite |
+| Recurring transaction code + schema deletion | High | Full removal: backend service/scheduler/controller/repo/routes, frontend page/hooks/api/types, DROP TABLE migration |
+| Tailwind CSS custom property refactor | High | Prerequisite for Phase 2 theme system |
+| Category table migration (user_id → household_id) | High | Prerequisite for Phase 10 household support; data migration must run cleanly on existing single-user deployments |
+| Account repository query refactor for sharing | High | All account-scoped queries in Phase 10 must include `account_shares` join |
+| OpenAPI coverage for new v0.3 endpoints | Medium | Maintain full spec coverage — household + account-sharing endpoints need YAML definitions |
+| E2E tests for household, tagging, and rollover flows | Medium | Extend Playwright suite |
 | Dashboard hints — ML/agent augmentation | Low | MCP server (Phase 18) can push hints via `GET /dashboard/hints`; consider structured hint schema |
+| MinIO/S3 integration | Low | Only needed if Export wish list item is promoted |
 
 ---
 
@@ -176,6 +369,14 @@ Improve the PWA experience specifically for mobile use cases.
 
 | Decision | Chosen | Rationale |
 |----------|--------|-----------|
-| Attachment storage | MinIO (S3-compatible) | Self-hosted, Unraid-native; same AES-256-GCM pipeline as DB fields |
+| Recurring transactions | **Removed** | Budget lines cover the forecasting use case; SimpleFIN covers real transaction import. Auto-generation created duplication risk with no meaningful gain for a single-user app. |
+| Theme system | CSS custom properties + `data-theme` attribute | Zero-JS theme switching; compatible with Tailwind 3.x via `var(--token)` in config; survives PWA without FOUC when combined with `localStorage` pre-load |
+| Storybook builder | `@storybook/react-vite` | Matches existing Vite 5 setup; shares path aliases and plugin config; faster than webpack builder |
+| Widget hook mocking in Storybook | Module-level mock via Storybook loaders | Avoids MSW complexity for a single-user app; custom hooks return static fixture data in story context |
 | Tag model | Flat `transaction_tags` join table | Simple; avoids FK complexity of a `tags` master table for freeform user labels |
 | Rollover carry-forward | User-initiated adjustment transactions | Preserves immutable transaction history; no silent balance corrections |
+| Household model | One household per deployment; `household_members` join table; owner creates members directly | Single-household constraint keeps the auth model simple; no invite emails required for a family self-hosted setup |
+| Account sharing | `account_shares` with `access_level ENUM('view','write')` per pair | Configurable per account rather than per user role; owner always retains full control |
+| Category ownership | Household-wide (migrated from per-user) | Shared categories are the natural fit for household budgeting; per-user categories added complexity for no real benefit |
+| Registration lockdown | Guard in `authService.register()` checking household count; `GET /registration-status` for UI | Server-side guard is authoritative; status endpoint prevents bad UX of a rejected form submission |
+| Attachment storage | MinIO (S3-compatible) | Self-hosted, Unraid-native; same AES-256-GCM pipeline as DB fields — deferred to wish list |
