@@ -12,6 +12,12 @@
     <title>Budget App</title>
   </head>
   <body>
+    <script>
+      (function () {
+        var t = localStorage.getItem('budgetapp_theme');
+        if (t) document.documentElement.setAttribute('data-theme', t);
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

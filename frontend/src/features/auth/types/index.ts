@@ -11,6 +11,7 @@ export interface User {
   timeFormat: '12h' | '24h';
   timezone: string;
   weekStart: 'sunday' | 'monday' | 'saturday';
+  theme: 'default' | 'slate' | 'forest' | 'warm' | 'midnight';
   createdAt: string;
 }
 
@@ -22,6 +23,7 @@ export interface UpdateProfileInput {
   timeFormat?: '12h' | '24h';
   timezone?: string;
   weekStart?: 'sunday' | 'monday' | 'saturday';
+  theme?: 'default' | 'slate' | 'forest' | 'warm' | 'midnight';
 }
 
 export interface ChangePasswordInput {

@@ -533,6 +533,7 @@ export const updateProfileSchema = Joi.object({
   timeFormat: Joi.string().valid('12h', '24h'),
   timezone: Joi.string().max(100),
   weekStart: Joi.string().valid('sunday', 'monday', 'saturday'),
+  theme: Joi.string().valid('default', 'slate', 'forest', 'warm', 'midnight'),
 }).min(1);
 
 export const changePasswordSchema = Joi.object({

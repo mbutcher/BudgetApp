@@ -17,6 +17,7 @@ import type {
   SessionInfo,
   UpdateProfileData,
   ChangePasswordData,
+  ThemeName,
 } from '@typings/auth.types';
 
 /**
@@ -313,6 +314,7 @@ class AuthService {
       timeFormat: '12h' | '24h';
       timezone: string;
       weekStart: 'sunday' | 'monday' | 'saturday';
+      theme: ThemeName;
       createdAt: Date;
     },
     email: string
@@ -330,6 +332,7 @@ class AuthService {
       timeFormat: user.timeFormat,
       timezone: user.timezone,
       weekStart: user.weekStart,
+      theme: user.theme,
       createdAt: user.createdAt,
     };
   }

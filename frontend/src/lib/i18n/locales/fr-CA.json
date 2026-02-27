@@ -72,6 +72,17 @@
       "copied": "Copié !",
       "noKeys": "Aucune clé API. Créez-en une dans les paramètres de sécurité.",
       "goToApiKeys": "Gérer les clés API"
+    },
+    "appearance": {
+      "title": "Apparence",
+      "subtitle": "Choisissez un thème de couleur",
+      "themes": {
+        "default": "Défaut",
+        "slate": "Ardoise",
+        "forest": "Forêt",
+        "warm": "Chaud",
+        "midnight": "Minuit"
+      }
     }
   },
   "security": {

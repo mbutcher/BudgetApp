@@ -6,13 +6,32 @@ components:
   schemas:
     PublicUser:
       type: object
-      required: [id, email, totpEnabled, webauthnEnabled, emailVerified, createdAt]
+      required: [id, email, totpEnabled, webauthnEnabled, emailVerified, defaultCurrency, locale, dateFormat, timeFormat, timezone, weekStart, theme, createdAt]
       properties:
-        id:          { type: string, format: uuid }
-        email:       { type: string, format: email }
-        totpEnabled: { type: boolean }
+        id:             { type: string, format: uuid }
+        email:          { type: string, format: email }
+        displayName:    { type: ['string', 'null'] }
+        totpEnabled:    { type: boolean }
         webauthnEnabled: { type: boolean }
-        emailVerified:   { type: boolean }
+        emailVerified:  { type: boolean }
+        defaultCurrency: { type: string, minLength: 3, maxLength: 3, description: ISO 4217 currency code, example: CAD }
+        locale:
+          type: string
+          enum: [en-CA, en-US, fr-CA]
+        dateFormat:
+          type: string
+          enum: [DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD]
+        timeFormat:
+          type: string
+          enum: [12h, 24h]
+        timezone:    { type: string, description: IANA timezone identifier, example: America/Toronto }
+        weekStart:
+          type: string
+          enum: [sunday, monday, saturday]
+        theme:
+          type: string
+          enum: [default, slate, forest, warm, midnight]
+          description: UI colour theme preset
         createdAt:   { type: string, format: date-time }
 
     Passkey:
@@ -198,6 +217,52 @@ paths:
                   data:
                     properties:
                       user: { $ref: '#/components/schemas/PublicUser' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    patch:
+      summary: Update user profile and preferences
+      tags: [Authentication]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                displayName:
+                  type: ['string', 'null']
+                  maxLength: 100
+                defaultCurrency: { type: string, minLength: 3, maxLength: 3 }
+                locale:
+                  type: string
+                  enum: [en-CA, en-US, fr-CA]
+                dateFormat:
+                  type: string
+                  enum: [DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD]
+                timeFormat:
+                  type: string
+                  enum: [12h, 24h]
+                timezone:  { type: string, maxLength: 100 }
+                weekStart:
+                  type: string
+                  enum: [sunday, monday, saturday]
+                theme:
+                  type: string
+                  enum: [default, slate, forest, warm, midnight]
+      responses:
+        '200':
+          description: Updated user profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [success] }
+                  data:
+                    properties:
+                      user: { $ref: '#/components/schemas/PublicUser' }
+        '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/UnauthorizedError' }
 
   /auth/totp/setup:

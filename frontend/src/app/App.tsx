@@ -4,6 +4,8 @@ import { useAuth } from '@features/auth/hooks/useAuth';
 import { useAuthStore } from '@features/auth/stores/authStore';
 import { ProtectedRoute } from '@features/auth/components/ProtectedRoute';
 import i18n from '@lib/i18n';
+import { useTheme } from './ThemeProvider';
+import type { ThemeName } from './ThemeProvider';
 import { AppLayout } from '@components/layout/AppLayout';
 import { PWAInstallBanner } from '@components/common/PWAInstallBanner';
 import { LoginPage } from '@features/auth/pages/LoginPage';
@@ -30,10 +32,15 @@ import { IntegrationsSettingsPage } from '@features/settings/pages/IntegrationsS
  */
 function AuthInitializer() {
   useAuth();
+  const { setTheme } = useTheme();
   const locale = useAuthStore((s) => s.user?.locale);
+  const theme = useAuthStore((s) => s.user?.theme);
   useEffect(() => {
     if (locale) void i18n.changeLanguage(locale);
   }, [locale]);
+  useEffect(() => {
+    if (theme) setTheme(theme as ThemeName);
+  }, [theme, setTheme]);
   return null;
 }
 

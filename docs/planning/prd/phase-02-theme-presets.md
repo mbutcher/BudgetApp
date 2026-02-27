@@ -3,7 +3,7 @@
 **Version:** v0.3
 **Priority:** High
 **Scope:** Medium
-**Status:** Ready for development
+**Status:** Complete
 **Dependency:** Phase 1 (Storybook) — stories must be updated after design refresh
 
 ---

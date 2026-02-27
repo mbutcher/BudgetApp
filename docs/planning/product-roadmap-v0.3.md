@@ -1,6 +1,6 @@
 # BudgetApp — Product Roadmap v0.3
 
-**Last updated:** 2026-02-28
+**Last updated:** 2026-03-01
 **Previous release:** [v0.2](./product-roadmap.md)
 
 ---
@@ -13,8 +13,9 @@ v0.3 focuses on developer experience, design quality, feature completeness, and 
 
 ---
 
-## Phase 1 — Storybook Integration
+## Phase 1 — Storybook Integration ✓
 
+**Status:** Complete
 **Priority:** High
 **Scope:** Medium
 
@@ -62,8 +63,9 @@ Each widget story mocks its custom hooks (no real API calls) and covers loaded, 
 
 ---
 
-## Phase 2 — Theme Presets & Design Refresh
+## Phase 2 — Theme Presets & Design Refresh ✓
 
+**Status:** Complete
 **Priority:** High
 **Scope:** Medium
 

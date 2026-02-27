@@ -1,0 +1,120 @@
+/* ─── Theme Presets ───────────────────────────────────────────────────────────
+ * Selectors use `:root[data-theme='X']` (specificity 0,2,0) to reliably
+ * override plain `:root` (specificity 0,1,0) regardless of CSS source order.
+ * The Default preset mirrors :root exactly so it acts as an explicit reset.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/* Default — neutral blues (mirrors :root) */
+:root[data-theme='default'] {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 221.2 83.2% 53.3%;
+}
+
+/* Slate — cool grey/blue tones; muted professional */
+:root[data-theme='slate'] {
+  --background: 210 20% 98%;
+  --foreground: 215 30% 18%;
+  --card: 0 0% 100%;
+  --card-foreground: 215 30% 18%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 215 30% 18%;
+  --primary: 213 40% 42%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 18% 91%;
+  --secondary-foreground: 215 30% 25%;
+  --muted: 210 15% 93%;
+  --muted-foreground: 215 16% 47%;
+  --accent: 210 18% 89%;
+  --accent-foreground: 215 30% 22%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 214 20% 87%;
+  --input: 214 20% 87%;
+  --ring: 213 40% 42%;
+}
+
+/* Forest — green accents; earthy calm */
+:root[data-theme='forest'] {
+  --background: 0 0% 100%;
+  --foreground: 150 12% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 150 12% 12%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 150 12% 12%;
+  --primary: 142 55% 36%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 142 20% 91%;
+  --secondary-foreground: 142 30% 18%;
+  --muted: 142 12% 94%;
+  --muted-foreground: 142 10% 45%;
+  --accent: 142 18% 88%;
+  --accent-foreground: 142 30% 18%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 142 15% 88%;
+  --input: 142 15% 88%;
+  --ring: 142 55% 36%;
+}
+
+/* Warm — amber/terracotta accents; friendly, energetic */
+:root[data-theme='warm'] {
+  --background: 30 25% 98%;
+  --foreground: 20 22% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 20 22% 12%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 20 22% 12%;
+  --primary: 25 80% 52%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 30 30% 91%;
+  --secondary-foreground: 20 30% 18%;
+  --muted: 30 20% 94%;
+  --muted-foreground: 20 12% 46%;
+  --accent: 30 25% 89%;
+  --accent-foreground: 20 30% 18%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 30 20% 87%;
+  --input: 30 20% 87%;
+  --ring: 25 80% 52%;
+}
+
+/* Midnight — dark surfaces; high-contrast accents */
+:root[data-theme='midnight'] {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 217.2 91.2% 59.8%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 224.3 76.3% 48%;
+}

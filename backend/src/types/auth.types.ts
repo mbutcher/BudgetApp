@@ -20,6 +20,7 @@ export interface User {
   timeFormat: '12h' | '24h';
   timezone: string;
   weekStart: 'sunday' | 'monday' | 'saturday';
+  theme: ThemeName;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -129,8 +130,11 @@ export interface PublicUser {
   timeFormat: '12h' | '24h';
   timezone: string;
   weekStart: 'sunday' | 'monday' | 'saturday';
+  theme: ThemeName;
   createdAt: Date;
 }
+
+export type ThemeName = 'default' | 'slate' | 'forest' | 'warm' | 'midnight';
 
 export interface UpdateProfileData {
   displayName?: string | null;
@@ -140,6 +144,7 @@ export interface UpdateProfileData {
   timeFormat?: '12h' | '24h';
   timezone?: string;
   weekStart?: 'sunday' | 'monday' | 'saturday';
+  theme?: ThemeName;
 }
 
 export interface ChangePasswordData {

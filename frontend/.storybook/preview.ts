@@ -4,7 +4,12 @@ import { MemoryRouter } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from '@lib/i18n';
+import { ThemeProvider } from '../src/app/ThemeProvider';
 import '@styles/globals.css';
+
+/** Wrap every story with ThemeProvider so CSS custom properties resolve correctly. */
+const withTheme: Decorator = (Story) =>
+  React.createElement(ThemeProvider, null, React.createElement(Story));
 
 /** Wrap every story in a fresh QueryClient (no retries, data never goes stale). */
 const withQueryClient: Decorator = (Story) => {
@@ -30,7 +35,7 @@ const withI18n: Decorator = (Story) =>
   React.createElement(I18nextProvider, { i18n }, React.createElement(Story));
 
 const preview: Preview = {
-  decorators: [withQueryClient, withRouter, withI18n],
+  decorators: [withTheme, withQueryClient, withRouter, withI18n],
   parameters: {
     actions: { argTypesRegex: '^on[A-Z].*' },
     controls: {

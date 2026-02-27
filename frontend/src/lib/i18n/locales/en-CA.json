@@ -72,6 +72,17 @@
       "copied": "Copied!",
       "noKeys": "No API keys yet. Create one in Security settings.",
       "goToApiKeys": "Manage API Keys"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "subtitle": "Choose a colour theme",
+      "themes": {
+        "default": "Default",
+        "slate": "Slate",
+        "forest": "Forest",
+        "warm": "Warm",
+        "midnight": "Midnight"
+      }
     }
   },
   "security": {

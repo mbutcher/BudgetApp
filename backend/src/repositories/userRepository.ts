@@ -23,6 +23,7 @@ function rowToUser(row: Record<string, unknown>): User {
     timeFormat: ((row['time_format'] as string | undefined) ?? '12h') as User['timeFormat'],
     timezone: (row['timezone'] as string | undefined) ?? 'America/Toronto',
     weekStart: ((row['week_start'] as string | undefined) ?? 'sunday') as User['weekStart'],
+    theme: ((row['theme'] as string | undefined) ?? 'default') as User['theme'],
     createdAt: new Date(row['created_at'] as string),
     updatedAt: new Date(row['updated_at'] as string),
   };
@@ -122,6 +123,7 @@ class UserRepository {
     if (data.timeFormat !== undefined) updates['time_format'] = data.timeFormat;
     if (data.timezone !== undefined) updates['timezone'] = data.timezone;
     if (data.weekStart !== undefined) updates['week_start'] = data.weekStart;
+    if (data.theme !== undefined) updates['theme'] = data.theme;
 
     if (Object.keys(updates).length > 0) {
       await this.db('users').where({ id: userId }).update(updates);

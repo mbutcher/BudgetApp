@@ -43,8 +43,8 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="px-6 py-5 border-b border-gray-100">
-        <span className="text-lg font-bold tracking-tight text-gray-900">BudgetApp</span>
+      <div className="px-6 py-5 border-b border-border">
+        <span className="text-lg font-bold tracking-tight text-foreground">BudgetApp</span>
       </div>
 
       {/* Nav links */}
@@ -58,8 +58,8 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
               [
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
               ].join(' ')
             }
           >
@@ -77,15 +77,15 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
               [
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
               ].join(' ')
             }
           >
             <Download className="h-4 w-4 shrink-0" />
             {t('nav.imports')}
             {importsBadge > 0 && (
-              <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+              <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
                 {importsBadge > 99 ? '99+' : importsBadge}
               </span>
             )}
@@ -94,7 +94,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       </nav>
 
       {/* Bottom: offline status + avatar menu */}
-      <div className="px-3 pb-4 border-t border-gray-100 pt-3 space-y-2">
+      <div className="px-3 pb-4 border-t border-border pt-3 space-y-2">
         {/* Offline / pending status */}
         {(!isOnline || pendingCount > 0) && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-amber-50 text-amber-700 text-xs">
@@ -113,7 +113,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         )}
 
         <div className="flex items-center justify-between px-3 py-1">
-          <span className="text-xs text-gray-400">{t('nav.settings')}</span>
+          <span className="text-xs text-muted-foreground">{t('nav.settings')}</span>
           <UserAvatarMenu onNav={onNav} />
         </div>
       </div>
@@ -127,7 +127,7 @@ export function AppLayout() {
   return (
     <div className="flex h-screen bg-muted/40">
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex md:w-56 md:flex-col md:shrink-0 bg-white border-r border-gray-100">
+      <aside className="hidden md:flex md:w-56 md:flex-col md:shrink-0 bg-background border-r border-border">
         <SidebarContent />
       </aside>
 
@@ -142,7 +142,7 @@ export function AppLayout() {
       {/* Mobile sidebar drawer */}
       <aside
         className={[
-          'fixed inset-y-0 left-0 z-40 w-56 bg-white border-r border-gray-100 transition-transform duration-200 md:hidden',
+          'fixed inset-y-0 left-0 z-40 w-56 bg-background border-r border-border transition-transform duration-200 md:hidden',
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
         ].join(' ')}
       >
@@ -152,20 +152,20 @@ export function AppLayout() {
       {/* Main content */}
       <div className="flex flex-col flex-1 min-w-0 overflow-auto">
         {/* Mobile top bar */}
-        <header className="flex items-center h-14 px-4 border-b border-gray-100 bg-white md:hidden">
+        <header className="flex items-center h-14 px-4 border-b border-border bg-background md:hidden">
           <button
             onClick={() => setMobileOpen(true)}
-            className="p-1 rounded-md text-gray-600 hover:bg-gray-100"
+            className="p-1 rounded-md text-muted-foreground hover:bg-muted"
             aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />
           </button>
-          <span className="ml-3 text-sm font-bold text-gray-900">BudgetApp</span>
+          <span className="ml-3 text-sm font-bold text-foreground">BudgetApp</span>
           <div className="ml-auto flex items-center gap-2">
             {mobileOpen && (
               <button
                 onClick={() => setMobileOpen(false)}
-                className="p-1 rounded-md text-gray-600 hover:bg-gray-100"
+                className="p-1 rounded-md text-muted-foreground hover:bg-muted"
                 aria-label="Close menu"
               >
                 <X className="h-5 w-5" />
