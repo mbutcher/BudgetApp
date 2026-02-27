@@ -212,7 +212,7 @@ class AuthService {
       throw new UnauthorizedError('Account not found or inactive');
     }
 
-    const tokens = await this.issueTokens(storedToken.userId, meta);
+    const tokens = await this.issueTokens(storedToken.userId, meta, new Date());
     const email = encryptionService.decrypt(user.emailEncrypted);
 
     loggers.auth('tokens_refreshed', storedToken.userId, { ip: meta.ip });
@@ -241,7 +241,11 @@ class AuthService {
 
   // ─── Private helpers ────────────────────────────────────────────────────────
 
-  private async issueTokens(userId: string, meta: RequestMeta): Promise<AuthTokens> {
+  private async issueTokens(
+    userId: string,
+    meta: RequestMeta,
+    lastUsedAt?: Date,
+  ): Promise<AuthTokens> {
     const accessToken = tokenService.signAccessToken(userId);
     const rawRefreshToken = tokenService.signRefreshToken(userId);
     const tokenHash = encryptionService.hashToken(rawRefreshToken);
@@ -258,6 +262,7 @@ class AuthService {
       deviceName: parseDeviceName(meta.userAgent).substring(0, 100),
       ipAddress: meta.ip,
       expiresAt,
+      lastUsedAt,
     });
 
     return { accessToken, refreshToken: rawRefreshToken };

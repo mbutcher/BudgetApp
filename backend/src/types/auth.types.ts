@@ -214,6 +214,7 @@ export interface CreateRefreshTokenData {
   deviceName: string | null;
   ipAddress: string | null;
   expiresAt: Date;
+  lastUsedAt?: Date;
 }
 
 export interface CreatePasskeyData {

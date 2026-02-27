@@ -77,3 +77,14 @@ export type LocalDashboardConfig = DashboardConfig & {
   /** Always 'singleton' — one row per IndexedDB database. */
   id: 'singleton';
 };
+
+/**
+ * Cache entry for server-computed responses that cannot be derived locally
+ * (budget view, pay period, upcoming expenses). Keyed by a string that encodes
+ * the query parameters, e.g. `budget-view:2026-02-01:2026-02-28`.
+ */
+export interface LocalBudgetViewCache {
+  id: string;
+  data: unknown;
+  cachedAt: string;
+}

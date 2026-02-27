@@ -9,6 +9,7 @@ import type {
   LocalSavingsGoal,
   LocalRecurringTransaction,
   LocalDashboardConfig,
+  LocalBudgetViewCache,
   PendingMutation,
   SyncMeta,
 } from './schema';
@@ -23,6 +24,7 @@ class BudgetDB extends Dexie {
   savingsGoals!: Table<LocalSavingsGoal, string>;
   recurringTransactions!: Table<LocalRecurringTransaction, string>;
   dashboardConfig!: Table<LocalDashboardConfig, string>;
+  budgetViewCache!: Table<LocalBudgetViewCache, string>;
   pendingMutations!: Table<PendingMutation, string>;
   syncMeta!: Table<SyncMeta, string>;
 
@@ -52,6 +54,10 @@ class BudgetDB extends Dexie {
     this.version(4).stores({
       dashboardConfig: 'id',
     });
+
+    this.version(5).stores({
+      budgetViewCache: 'id, cachedAt',
+    });
   }
 }
 
@@ -66,6 +72,7 @@ export type {
   LocalSavingsGoal,
   LocalRecurringTransaction,
   LocalDashboardConfig,
+  LocalBudgetViewCache,
   PendingMutation,
   SyncMeta,
 };

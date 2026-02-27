@@ -32,6 +32,7 @@ class RefreshTokenRepository {
       device_name: data.deviceName,
       ip_address: data.ipAddress,
       expires_at: data.expiresAt,
+      last_used_at: data.lastUsedAt ?? null,
     });
     const row: unknown = await this.db('refresh_tokens')
       .where({ token_hash: data.tokenHash })

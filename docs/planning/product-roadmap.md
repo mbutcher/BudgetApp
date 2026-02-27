@@ -568,11 +568,11 @@ Consolidate all authentication and access management onto one page:
 
 | Item | Priority | Notes |
 |------|----------|-------|
-| Backend Knex `any` types | Medium | 109 pre-existing ESLint errors from Knex's untyped query results across repository files. Add Knex generics to typed `select<T>()` calls incrementally. |
-| Budget Lines offline support | Medium | `useBudgetLines`/`useBudgetView` hooks lack Dexie fallback. See Phase 17.2. |
-| `discardedIds` JSON growth | Medium | Unbounded `discarded_ids_json` column. See Phase 17.5. |
-| Session management device names | Medium | Refresh tokens lack `device_name`. See Phase 17.4. |
-| Orphaned `frequencyLabel.ts` | Low | `frontend/src/lib/utils/frequencyLabel.ts` is unreferenced dead code; both `budgetViewUtils.ts` and `RecurringTransactionsPage.tsx` define their own equivalent. Safe to delete. |
+| ~~Backend Knex `any` types~~ | ~~Medium~~ | ~~Not an issue — repositories use the `unknown → Record<string, unknown>` pattern with typed mapper functions; no ESLint violations present~~ ✓ |
+| ~~Budget Lines offline support~~ | ~~Medium~~ | ~~`useBudgetLines` already had Dexie fallback; added `budgetViewCache` Dexie table (v5) and offline fallback to `useBudgetView`, `usePayPeriod`, `useUpcomingExpenses`~~ ✓ |
+| ~~`discardedIds` JSON growth~~ | ~~Medium~~ | ~~Normalized `simplefin_discarded_ids` table with 90-day pruning implemented (migration 20260227004, `simplefinRepository` methods, fire-and-forget in sync)~~ ✓ |
+| ~~Session management device names~~ | ~~Medium~~ | ~~Device name populated from UA on login; `last_used_at` stamped on token rotation; session list shows "Last used" date~~ ✓ |
+| ~~Orphaned `frequencyLabel.ts`~~ | ~~Low~~ | ~~Deleted~~ ✓ |
 | Load testing | Low | No load tests. Add k6 scripts for transaction import endpoint. |
 | API pagination | Low | Accounts and transactions lists are unbounded; add `page`/`limit`. |
 | Rate limit tuning | Low | Evaluate 5 req/15 min auth limit for WebAuthn multi-round-trip flows. |

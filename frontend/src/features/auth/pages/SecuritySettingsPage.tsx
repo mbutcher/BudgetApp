@@ -503,8 +503,10 @@ export function SecuritySettingsPage() {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground truncate">
-                          {session.ipAddress ?? '—'} · {t('security.sessionsSignedIn')}{' '}
-                          {new Date(session.createdAt).toLocaleDateString()}
+                          {session.ipAddress ?? '—'} ·{' '}
+                          {session.lastUsedAt
+                            ? `${t('security.sessionsLastUsed')} ${new Date(session.lastUsedAt).toLocaleDateString()}`
+                            : `${t('security.sessionsSignedIn')} ${new Date(session.createdAt).toLocaleDateString()}`}
                         </p>
                       </div>
                     </div>
