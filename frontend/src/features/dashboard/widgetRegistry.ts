@@ -3,15 +3,23 @@ import type { WidgetId, DashboardConfig, DashboardLayouts, GridLayoutItem, Widge
 // ─── Widget metadata ──────────────────────────────────────────────────────────
 
 export const WIDGET_META: WidgetMeta[] = [
-  { id: 'warnings', labelKey: 'dashboard.widgets.warnings', alwaysOn: true, defaultH: 2 },
-  { id: 'net-worth', labelKey: 'dashboard.widgets.netWorth', defaultH: 3 },
-  { id: 'account-balances', labelKey: 'dashboard.widgets.accountBalances', defaultH: 4 },
-  { id: 'budget-snapshot', labelKey: 'dashboard.widgets.budgetSnapshot', defaultH: 5 },
-  { id: 'upcoming-expenses', labelKey: 'dashboard.widgets.upcomingExpenses', defaultH: 5 },
-  { id: 'monthly-chart', labelKey: 'dashboard.widgets.monthlyChart', defaultH: 5 },
-  { id: 'savings-goals', labelKey: 'dashboard.widgets.savingsGoals', defaultH: 4 },
-  { id: 'recent-transactions', labelKey: 'dashboard.widgets.recentTransactions', defaultH: 6 },
-  { id: 'hints', labelKey: 'dashboard.widgets.hints', defaultH: 3 },
+  // Overview
+  { id: 'warnings', labelKey: 'dashboard.widgets.warnings', category: 'overview', minW: 2, minH: 2, alwaysOn: true, defaultH: 2 },
+  { id: 'net-worth', labelKey: 'dashboard.widgets.netWorth', category: 'overview', minW: 2, minH: 2, defaultH: 3 },
+  { id: 'account-balances', labelKey: 'dashboard.widgets.accountBalances', category: 'overview', minW: 2, minH: 2, defaultH: 4 },
+  { id: 'hints', labelKey: 'dashboard.widgets.hints', category: 'overview', minW: 2, minH: 2, defaultH: 3 },
+  // Budgeting
+  { id: 'budget-snapshot', labelKey: 'dashboard.widgets.budgetSnapshot', category: 'budgeting', minW: 3, minH: 3, defaultH: 5 },
+  { id: 'monthly-chart', labelKey: 'dashboard.widgets.monthlyChart', category: 'budgeting', minW: 4, minH: 3, defaultH: 5 },
+  { id: 'upcoming-expenses', labelKey: 'dashboard.widgets.upcomingExpenses', category: 'budgeting', minW: 2, minH: 3, defaultH: 5 },
+  // Savings
+  { id: 'savings-goals', labelKey: 'dashboard.widgets.savingsGoals', category: 'savings', minW: 2, minH: 3, defaultH: 4 },
+  // Spending
+  { id: 'spending-by-category', labelKey: 'dashboard.widgets.spendingByCategory', category: 'spending', minW: 3, minH: 3, defaultH: 5 },
+  { id: 'recent-transactions', labelKey: 'dashboard.widgets.recentTransactions', category: 'spending', minW: 3, minH: 3, defaultH: 6 },
+  { id: 'tag-summary', labelKey: 'dashboard.widgets.tagSummary', category: 'spending', minW: 3, minH: 2, defaultH: 4, featureFlag: 'tagging' },
+  // Debt
+  { id: 'debt-payoff', labelKey: 'dashboard.widgets.debtPayoff', category: 'debt', minW: 3, minH: 3, defaultH: 4 },
 ];
 
 // ─── Default visibility ───────────────────────────────────────────────────────
@@ -26,54 +34,66 @@ export const DEFAULT_WIDGET_VISIBILITY: Record<WidgetId, boolean> = {
   'savings-goals': true,
   'recent-transactions': true,
   hints: true,
+  'spending-by-category': false,
+  'debt-payoff': false,
+  'tag-summary': false,
 };
 
 // ─── Default layouts ──────────────────────────────────────────────────────────
 
 function buildDefaultLayouts(): DashboardLayouts {
+  // 'warnings' is rendered as a full-width banner outside the grid — not included in layouts
   const xs = (): GridLayoutItem[] => [
-    { i: 'warnings', x: 0, y: 0, w: 2, h: 2 },
-    { i: 'net-worth', x: 0, y: 2, w: 2, h: 3 },
-    { i: 'account-balances', x: 0, y: 5, w: 2, h: 4 },
-    { i: 'monthly-chart', x: 0, y: 9, w: 2, h: 5 },
-    { i: 'upcoming-expenses', x: 0, y: 14, w: 2, h: 5 },
-    { i: 'budget-snapshot', x: 0, y: 19, w: 2, h: 5 },
-    { i: 'recent-transactions', x: 0, y: 24, w: 2, h: 6 },
-    { i: 'savings-goals', x: 0, y: 30, w: 2, h: 4 },
-    { i: 'hints', x: 0, y: 34, w: 2, h: 3 },
+    { i: 'net-worth', x: 0, y: 0, w: 2, h: 3, minW: 2, minH: 2 },
+    { i: 'account-balances', x: 0, y: 3, w: 2, h: 4, minW: 2, minH: 2 },
+    { i: 'monthly-chart', x: 0, y: 7, w: 2, h: 5, minW: 2, minH: 3 },
+    { i: 'upcoming-expenses', x: 0, y: 12, w: 2, h: 5, minW: 2, minH: 3 },
+    { i: 'budget-snapshot', x: 0, y: 17, w: 2, h: 5, minW: 2, minH: 3 },
+    { i: 'recent-transactions', x: 0, y: 22, w: 2, h: 6, minW: 2, minH: 3 },
+    { i: 'savings-goals', x: 0, y: 28, w: 2, h: 4, minW: 2, minH: 3 },
+    { i: 'hints', x: 0, y: 32, w: 2, h: 3, minW: 2, minH: 2 },
+    { i: 'spending-by-category', x: 0, y: 35, w: 2, h: 5, minW: 2, minH: 3 },
+    { i: 'debt-payoff', x: 0, y: 40, w: 2, h: 4, minW: 2, minH: 3 },
+    { i: 'tag-summary', x: 0, y: 44, w: 2, h: 4, minW: 2, minH: 2 },
   ];
   const sm = (): GridLayoutItem[] => [
-    { i: 'warnings', x: 0, y: 0, w: 4, h: 2 },
-    { i: 'net-worth', x: 0, y: 2, w: 2, h: 3 },
-    { i: 'savings-goals', x: 2, y: 2, w: 2, h: 3 },
-    { i: 'account-balances', x: 0, y: 5, w: 4, h: 4 },
-    { i: 'monthly-chart', x: 0, y: 9, w: 4, h: 5 },
-    { i: 'upcoming-expenses', x: 0, y: 14, w: 4, h: 5 },
-    { i: 'budget-snapshot', x: 0, y: 19, w: 4, h: 5 },
-    { i: 'recent-transactions', x: 0, y: 24, w: 4, h: 6 },
-    { i: 'hints', x: 0, y: 30, w: 2, h: 3 },
+    { i: 'net-worth', x: 0, y: 0, w: 2, h: 3, minW: 2, minH: 2 },
+    { i: 'savings-goals', x: 2, y: 0, w: 2, h: 3, minW: 2, minH: 3 },
+    { i: 'account-balances', x: 0, y: 3, w: 4, h: 4, minW: 2, minH: 2 },
+    { i: 'monthly-chart', x: 0, y: 7, w: 4, h: 5, minW: 4, minH: 3 },
+    { i: 'upcoming-expenses', x: 0, y: 12, w: 4, h: 5, minW: 2, minH: 3 },
+    { i: 'budget-snapshot', x: 0, y: 17, w: 4, h: 5, minW: 3, minH: 3 },
+    { i: 'recent-transactions', x: 0, y: 22, w: 4, h: 6, minW: 3, minH: 3 },
+    { i: 'hints', x: 0, y: 28, w: 2, h: 3, minW: 2, minH: 2 },
+    { i: 'spending-by-category', x: 0, y: 31, w: 4, h: 5, minW: 3, minH: 3 },
+    { i: 'debt-payoff', x: 0, y: 36, w: 4, h: 4, minW: 3, minH: 3 },
+    { i: 'tag-summary', x: 0, y: 40, w: 4, h: 4, minW: 3, minH: 2 },
   ];
   const lg = (): GridLayoutItem[] => [
-    { i: 'warnings', x: 0, y: 0, w: 6, h: 2 },
-    { i: 'net-worth', x: 0, y: 2, w: 2, h: 3 },
-    { i: 'savings-goals', x: 2, y: 2, w: 2, h: 3 },
-    { i: 'hints', x: 4, y: 2, w: 2, h: 3 },
-    { i: 'account-balances', x: 0, y: 5, w: 4, h: 4 },
-    { i: 'monthly-chart', x: 0, y: 9, w: 6, h: 5 },
-    { i: 'upcoming-expenses', x: 0, y: 14, w: 4, h: 5 },
-    { i: 'budget-snapshot', x: 4, y: 14, w: 2, h: 5 },
-    { i: 'recent-transactions', x: 0, y: 19, w: 4, h: 6 },
+    { i: 'net-worth', x: 0, y: 0, w: 2, h: 3, minW: 2, minH: 2 },
+    { i: 'savings-goals', x: 2, y: 0, w: 2, h: 3, minW: 2, minH: 3 },
+    { i: 'hints', x: 4, y: 0, w: 2, h: 3, minW: 2, minH: 2 },
+    { i: 'account-balances', x: 0, y: 3, w: 4, h: 4, minW: 2, minH: 2 },
+    { i: 'monthly-chart', x: 0, y: 7, w: 6, h: 5, minW: 4, minH: 3 },
+    { i: 'upcoming-expenses', x: 0, y: 12, w: 4, h: 5, minW: 2, minH: 3 },
+    { i: 'budget-snapshot', x: 4, y: 12, w: 2, h: 5, minW: 3, minH: 3 },
+    { i: 'recent-transactions', x: 0, y: 17, w: 4, h: 6, minW: 3, minH: 3 },
+    { i: 'spending-by-category', x: 0, y: 23, w: 3, h: 5, minW: 3, minH: 3 },
+    { i: 'debt-payoff', x: 3, y: 23, w: 3, h: 5, minW: 3, minH: 3 },
+    { i: 'tag-summary', x: 0, y: 28, w: 4, h: 4, minW: 3, minH: 2 },
   ];
   const xl = (): GridLayoutItem[] => [
-    { i: 'warnings', x: 0, y: 0, w: 8, h: 2 },
-    { i: 'net-worth', x: 0, y: 2, w: 2, h: 3 },
-    { i: 'savings-goals', x: 2, y: 2, w: 2, h: 3 },
-    { i: 'hints', x: 4, y: 2, w: 2, h: 3 },
-    { i: 'account-balances', x: 0, y: 5, w: 4, h: 4 },
-    { i: 'monthly-chart', x: 0, y: 9, w: 6, h: 5 },
-    { i: 'upcoming-expenses', x: 6, y: 9, w: 2, h: 5 },
-    { i: 'budget-snapshot', x: 4, y: 5, w: 4, h: 4 },
-    { i: 'recent-transactions', x: 0, y: 14, w: 4, h: 6 },
+    { i: 'net-worth', x: 0, y: 0, w: 2, h: 3, minW: 2, minH: 2 },
+    { i: 'savings-goals', x: 2, y: 0, w: 2, h: 3, minW: 2, minH: 3 },
+    { i: 'hints', x: 4, y: 0, w: 2, h: 3, minW: 2, minH: 2 },
+    { i: 'account-balances', x: 0, y: 3, w: 4, h: 4, minW: 2, minH: 2 },
+    { i: 'monthly-chart', x: 0, y: 7, w: 6, h: 5, minW: 4, minH: 3 },
+    { i: 'upcoming-expenses', x: 6, y: 7, w: 2, h: 5, minW: 2, minH: 3 },
+    { i: 'budget-snapshot', x: 4, y: 3, w: 4, h: 4, minW: 3, minH: 3 },
+    { i: 'recent-transactions', x: 0, y: 12, w: 4, h: 6, minW: 3, minH: 3 },
+    { i: 'spending-by-category', x: 4, y: 12, w: 2, h: 5, minW: 3, minH: 3 },
+    { i: 'debt-payoff', x: 6, y: 12, w: 2, h: 5, minW: 3, minH: 3 },
+    { i: 'tag-summary', x: 0, y: 18, w: 4, h: 4, minW: 3, minH: 2 },
   ];
   return { xs: xs(), sm: sm(), lg: lg(), xl: xl() };
 }

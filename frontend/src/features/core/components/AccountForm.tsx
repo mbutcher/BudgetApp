@@ -1,26 +1,40 @@
-import { useForm, Controller } from 'react-hook-form';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { Account, CreateAccountInput } from '../types';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import type { Account, AccountType, CreateAccountInput } from '../types';
 import { useCreateAccount, useUpdateAccount } from '../hooks/useAccounts';
 import { getApiErrorMessage } from '@lib/api/errors';
 import { useAuthStore } from '@features/auth/stores/authStore';
 
-const ACCOUNT_TYPES = [
-  { value: 'checking', label: 'Chequing' },
-  { value: 'savings', label: 'Savings' },
-  { value: 'credit_card', label: 'Credit Card' },
-  { value: 'loan', label: 'Loan' },
-  { value: 'line_of_credit', label: 'Line of Credit' },
-  { value: 'mortgage', label: 'Mortgage' },
-  { value: 'investment', label: 'Investment' },
-  { value: 'other', label: 'Other' },
-] as const;
+const ASSET_TYPES = new Set<AccountType>(['checking', 'savings', 'investment', 'other']);
+
+// 31-colour palette + 1 "none" (white) slot = 32 swatches, 4 rows of 8
+const PALETTE = [
+  '#fca5a5', '#ef4444', '#b91c1c', '#7f1d1d',
+  '#fdba74', '#f97316', '#c2410c',
+  '#fde047', '#eab308', '#a16207', '#713f12',
+  '#86efac', '#22c55e', '#15803d', '#14532d',
+  '#5eead4', '#14b8a6', '#0f766e', '#134e4a',
+  '#93c5fd', '#3b82f6', '#1d4ed8', '#1e3a8a',
+  '#c4b5fd', '#8b5cf6', '#6d28d9', '#4c1d95',
+  '#d1d5db', '#6b7280', '#374151', '#111827',
+];
+
+/** Derives isAsset from account type — no manual toggle needed. */
+function inferIsAsset(type: AccountType): boolean {
+  return ASSET_TYPES.has(type);
+}
+
+const ACCOUNT_TYPES: AccountType[] = [
+  'checking', 'savings', 'credit_card', 'loan', 'line_of_credit', 'mortgage', 'investment', 'other',
+];
 
 const accountSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(255),
+  name: z.string().min(1, 'required').max(255),
   type: z.enum(['checking', 'savings', 'credit_card', 'loan', 'line_of_credit', 'mortgage', 'investment', 'other']),
-  isAsset: z.boolean(),
   startingBalance: z.number().default(0),
   currency: z.string().length(3, 'Must be a 3-letter code (e.g. USD)').default('USD'),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().or(z.literal('')),
@@ -37,10 +51,12 @@ interface AccountFormProps {
 }
 
 const inputClass =
-  'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
+  'w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring';
 
 export function AccountForm({ account, onSuccess, onCancel }: AccountFormProps) {
+  const { t } = useTranslation();
   const isEditing = Boolean(account);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const createAccount = useCreateAccount();
   const updateAccount = useUpdateAccount();
   const { user } = useAuthStore();
@@ -49,8 +65,8 @@ export function AccountForm({ account, onSuccess, onCancel }: AccountFormProps) 
   const {
     register,
     handleSubmit,
-    control,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<AccountFormData>({
     resolver: zodResolver(accountSchema),
@@ -58,7 +74,6 @@ export function AccountForm({ account, onSuccess, onCancel }: AccountFormProps) 
       ? {
           name: account.name,
           type: account.type,
-          isAsset: account.isAsset,
           startingBalance: account.startingBalance,
           currency: account.currency,
           color: account.color ?? '',
@@ -67,7 +82,6 @@ export function AccountForm({ account, onSuccess, onCancel }: AccountFormProps) 
         }
       : {
           type: 'checking',
-          isAsset: true,
           startingBalance: 0,
           currency: defaultCurrency,
           annualRatePct: null,
@@ -75,19 +89,24 @@ export function AccountForm({ account, onSuccess, onCancel }: AccountFormProps) 
   });
 
   const error = createAccount.error ?? updateAccount.error;
-  const [watchedStartingBalance, watchedIsAsset] = watch(['startingBalance', 'isAsset']);
+  const watchedType = watch('type');
+  const watchedStartingBalance = watch('startingBalance');
+  const watchedColor = watch('color') ?? '';
+  const isAsset = inferIsAsset(watchedType);
   const startingBalanceChanged =
     isEditing && account && watchedStartingBalance !== account.startingBalance;
 
   async function onSubmit(data: AccountFormData) {
     const annualRate = data.annualRatePct != null ? data.annualRatePct / 100 : null;
+    const computedIsAsset = inferIsAsset(data.type);
+
     if (isEditing && account) {
       await updateAccount.mutateAsync({
         id: account.id,
         data: {
           name: data.name,
           type: data.type,
-          isAsset: data.isAsset,
+          isAsset: computedIsAsset,
           startingBalance: data.startingBalance,
           currency: data.currency.toUpperCase(),
           color: data.color || null,
@@ -99,7 +118,7 @@ export function AccountForm({ account, onSuccess, onCancel }: AccountFormProps) 
       const input: CreateAccountInput = {
         name: data.name,
         type: data.type,
-        isAsset: data.isAsset,
+        isAsset: computedIsAsset,
         startingBalance: data.startingBalance,
         currency: data.currency.toUpperCase(),
         color: data.color || undefined,
@@ -114,175 +133,190 @@ export function AccountForm({ account, onSuccess, onCancel }: AccountFormProps) 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive">
           {getApiErrorMessage(error)}
         </div>
       )}
 
       {/* Account Name */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Account Name</label>
+        <label className="block text-sm font-medium text-foreground mb-1">
+          {t('accounts.form.name')}
+        </label>
         <input
           {...register('name')}
           className={inputClass}
-          placeholder="e.g. TD Chequing"
+          placeholder={t('accounts.form.namePlaceholder')}
+          autoFocus
         />
-        {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
-      </div>
-
-      {/* Account Type */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Account Type</label>
-        <select {...register('type')} className={inputClass}>
-          {ACCOUNT_TYPES.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label}
-            </option>
-          ))}
-        </select>
-        {errors.type && <p className="text-red-500 text-xs mt-1">{errors.type.message}</p>}
-      </div>
-
-      {/* Asset / Liability toggle */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Account Role</label>
-        <Controller
-          name="isAsset"
-          control={control}
-          render={({ field }) => (
-            <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm font-medium">
-              <button
-                type="button"
-                onClick={() => field.onChange(true)}
-                className={`flex-1 py-2 transition-colors ${
-                  field.value
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                Asset
-                <span className="block text-xs font-normal opacity-80">Adds to net worth</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => field.onChange(false)}
-                className={`flex-1 py-2 border-l border-gray-300 transition-colors ${
-                  !field.value
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                Liability
-                <span className="block text-xs font-normal opacity-80">Subtracts from net worth</span>
-              </button>
-            </div>
-          )}
-        />
-      </div>
-
-      {/* Starting Balance */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Starting Balance</label>
-        <input
-          type="number"
-          step="0.01"
-          {...register('startingBalance', { valueAsNumber: true })}
-          className={inputClass}
-        />
-        {isEditing && startingBalanceChanged && (
-          <p className="text-blue-600 text-xs mt-1">
-            Current balance will be adjusted by the same amount
-          </p>
-        )}
-        {errors.startingBalance && (
-          <p className="text-red-500 text-xs mt-1">{errors.startingBalance.message}</p>
-        )}
-      </div>
-
-      {/* Currency */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
-        <input
-          {...register('currency')}
-          className={inputClass}
-          placeholder="USD"
-          maxLength={3}
-          style={{ textTransform: 'uppercase' }}
-        />
-        {errors.currency && <p className="text-red-500 text-xs mt-1">{errors.currency.message}</p>}
+        {errors.name && <p className="text-destructive text-xs mt-1">{errors.name.message}</p>}
       </div>
 
       {/* Institution */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Institution <span className="font-normal text-gray-400">(optional)</span>
+        <label className="block text-sm font-medium text-foreground mb-1">
+          {t('accounts.form.institution')}{' '}
+          <span className="font-normal text-muted-foreground">{t('accounts.form.optional')}</span>
         </label>
         <input
           {...register('institution')}
           className={inputClass}
-          placeholder="e.g. Chase Bank"
+          placeholder={t('accounts.form.institutionPlaceholder')}
         />
       </div>
 
-      {/* Interest Rate */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          {watchedIsAsset ? (
-            <>Interest Rate % <span className="font-normal text-gray-400">(optional)</span></>
-          ) : (
-            <>Annual Interest Rate (APR) % <span className="font-normal text-gray-400">(optional)</span></>
+      {/* Currency + Interest Rate */}
+      <div className="flex gap-3">
+        <div className="w-24 flex-shrink-0">
+          <label className="block text-sm font-medium text-foreground mb-1">
+            {t('accounts.form.currency')}
+          </label>
+          <input
+            {...register('currency')}
+            className={inputClass}
+            placeholder="USD"
+            maxLength={3}
+            style={{ textTransform: 'uppercase' }}
+          />
+          {errors.currency && <p className="text-destructive text-xs mt-1">{errors.currency.message}</p>}
+        </div>
+
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-foreground mb-1 truncate">
+            {isAsset ? t('accounts.form.interestRateAsset') : t('accounts.form.interestRateDebt')}
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            max="999.99"
+            {...register('annualRatePct', {
+              valueAsNumber: true,
+              setValueAs: (v) => (v === '' ? null : Number(v)),
+            })}
+            className={inputClass}
+            placeholder="e.g. 5.25"
+          />
+          {errors.annualRatePct && (
+            <p className="text-destructive text-xs mt-1">{errors.annualRatePct.message}</p>
           )}
+        </div>
+      </div>
+      {!isAsset && (
+        <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 text-xs text-foreground">
+          {t('accounts.form.interestInfoDebt')}
+        </div>
+      )}
+      <p className="text-muted-foreground text-xs -mt-2">
+        {isAsset ? t('accounts.form.aprHintAsset') : t('accounts.form.aprHintDebt')}
+      </p>
+
+      {/* Colour palette */}
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-2">
+          {t('accounts.form.color')}{' '}
+          <span className="font-normal text-muted-foreground">{t('accounts.form.optional')}</span>
         </label>
-        <input
-          type="number"
-          step="0.01"
-          min="0"
-          max="999.99"
-          {...register('annualRatePct', { valueAsNumber: true, setValueAs: (v) => v === '' ? null : Number(v) })}
-          className={inputClass}
-          placeholder="e.g. 5.25"
-        />
-        {!watchedIsAsset && (
-          <div className="mt-2 rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-xs text-blue-800">
-            Adding your APR lets us estimate your monthly interest charges and show you exactly how
-            much sooner you could pay off this account — and how much interest you could save — by
-            making extra payments.
+        <div className="grid grid-cols-8 gap-1.5">
+          {/* "None" swatch */}
+          <button
+            type="button"
+            onClick={() => setValue('color', '', { shouldValidate: true })}
+            className={`h-7 w-full rounded-md border-2 transition-all ${
+              !watchedColor
+                ? 'border-foreground/50 ring-2 ring-foreground/20 scale-110'
+                : 'border-border hover:scale-110 hover:border-foreground/20'
+            }`}
+            style={{ backgroundColor: '#ffffff' }}
+            title="No colour"
+          />
+          {PALETTE.map((hex) => (
+            <button
+              key={hex}
+              type="button"
+              onClick={() => setValue('color', hex, { shouldValidate: true })}
+              className={`h-7 w-full rounded-md border-2 transition-all ${
+                watchedColor === hex
+                  ? 'border-foreground/60 ring-2 ring-foreground/20 scale-110'
+                  : 'border-transparent hover:scale-110 hover:border-foreground/20'
+              }`}
+              style={{ backgroundColor: hex }}
+              title={hex}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Advanced options toggle */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowAdvanced((v) => !v)}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {showAdvanced ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          {showAdvanced ? t('accounts.form.hideAdvanced') : t('accounts.form.showAdvanced')}
+        </button>
+
+        {showAdvanced && (
+          <div className="mt-3 space-y-4 pl-4 border-l border-border">
+            {/* Account Type */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                {t('accounts.form.type')}
+              </label>
+              <select {...register('type')} className={inputClass}>
+                {ACCOUNT_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {t(`accounts.types.${type}`)}
+                  </option>
+                ))}
+              </select>
+              {errors.type && <p className="text-destructive text-xs mt-1">{errors.type.message}</p>}
+            </div>
+
+            {/* Starting Balance */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                {t('accounts.form.startingBalance')}
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                {...register('startingBalance', { valueAsNumber: true })}
+                className={inputClass}
+              />
+              {isEditing && startingBalanceChanged && (
+                <p className="text-primary text-xs mt-1">
+                  {t('accounts.form.startingBalanceChanged')}
+                </p>
+              )}
+              {errors.startingBalance && (
+                <p className="text-destructive text-xs mt-1">{errors.startingBalance.message}</p>
+              )}
+            </div>
           </div>
         )}
-        <p className="text-gray-400 text-xs mt-1">
-          {watchedIsAsset ? 'APY for savings/investments' : 'APR — check your statement or card agreement'}
-        </p>
-        {errors.annualRatePct && (
-          <p className="text-red-500 text-xs mt-1">{errors.annualRatePct.message}</p>
-        )}
-      </div>
-
-      {/* Color */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Color <span className="font-normal text-gray-400">(optional)</span>
-        </label>
-        <input
-          type="color"
-          {...register('color')}
-          className="h-9 w-full border border-gray-300 rounded-lg px-1 py-1 cursor-pointer"
-        />
       </div>
 
       <div className="flex gap-3 pt-2">
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          className="flex-1 border border-border rounded-lg px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
         >
-          Cancel
+          {t('common.cancel')}
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
-          className="flex-1 bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+          className="flex-1 bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
         >
-          {isSubmitting ? 'Saving...' : isEditing ? 'Update Account' : 'Create Account'}
+          {isSubmitting
+            ? t('accounts.form.saving')
+            : isEditing
+            ? t('accounts.form.updateAccount')
+            : t('accounts.form.createAccount')}
         </button>
       </div>
     </form>

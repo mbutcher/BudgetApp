@@ -5,6 +5,7 @@ import { AccountCard } from '../components/AccountCard';
 import { AccountForm } from '../components/AccountForm';
 import { useExchangeRates } from '../hooks/useExchangeRate';
 import { useAuthStore } from '@features/auth/stores/authStore';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@components/ui/dialog';
 import type { Account, AccountType } from '../types';
 
 type SortKey = 'name-asc' | 'name-desc' | 'balance-desc' | 'balance-asc' | 'type' | 'rate-desc' | 'rate-asc';
@@ -179,25 +180,27 @@ export function AccountsPage() {
         </div>
         <button
           onClick={() => { setEditing(null); setShowForm(true); }}
-          className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700"
+          className="bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
         >
           {t('accounts.addAccount')}
         </button>
       </div>
 
-      {/* Edit / Create form */}
-      {(showForm || editing) && (
-        <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-4">
-            {editing ? t('accounts.editAccountTitle') : t('accounts.newAccount')}
-          </h2>
+      {/* Edit / Create modal */}
+      <Dialog open={showForm || editing !== null} onOpenChange={(open) => { if (!open) closeForm(); }}>
+        <DialogContent className="overflow-y-auto max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>
+              {editing ? t('accounts.editAccountTitle') : t('accounts.newAccount')}
+            </DialogTitle>
+          </DialogHeader>
           <AccountForm
             account={editing ?? undefined}
             onSuccess={closeForm}
             onCancel={closeForm}
           />
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* Filter / Sort bar */}
       {!isLoading && activeAccounts.length > 0 && (

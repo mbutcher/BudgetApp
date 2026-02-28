@@ -1,6 +1,6 @@
 # BudgetApp — Product Roadmap v0.3
 
-**Last updated:** 2026-03-01
+**Last updated:** 2026-03-02
 **Previous release:** [v0.2](./product-roadmap.md)
 
 ---
@@ -102,8 +102,9 @@ Each widget story mocks its custom hooks (no real API calls) and covers loaded, 
 
 ---
 
-## Phase 3 — Dashboard Widget Revisions
+## Phase 3 — Dashboard Widget Revisions ✓
 
+**Status:** Complete
 **Priority:** High
 **Scope:** Medium
 **Dependency:** Phase 1 (Storybook) — iterate widget designs in isolation before integration

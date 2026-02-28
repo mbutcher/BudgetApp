@@ -14,6 +14,9 @@ import type {
   PayPeriod,
   UpcomingExpensesResponse,
   NetWorthSnapshot,
+  SpendingByCategoryResponse,
+  DebtSchedule,
+  AmortizationSchedule,
 } from '@features/core/types';
 import type { MonthlySummaryEntry } from '@features/core/api/reportApi';
 
@@ -386,6 +389,43 @@ export const mockUpcomingExpenses: UpcomingExpensesResponse = {
       categoryId: 'cat-food',
     },
   ],
+};
+
+// ─── Spending By Category ──────────────────────────────────────────────────────
+
+export const mockSpendingByCategory: SpendingByCategoryResponse = {
+  start: '2026-02-01',
+  end: '2026-02-28',
+  type: 'expense',
+  total: 2106,
+  categories: [
+    { categoryId: 'cat-1', categoryName: 'Groceries', parentId: null, color: '#22c55e', totalAmount: 423.5, percentage: 20.1 },
+    { categoryId: 'cat-2', categoryName: 'Dining Out', parentId: null, color: '#f97316', totalAmount: 287.4, percentage: 13.6 },
+    { categoryId: 'cat-3', categoryName: 'Housing', parentId: null, color: '#3b82f6', totalAmount: 1800, percentage: 85.5 },
+    { categoryId: 'cat-4', categoryName: 'Transport', parentId: null, color: '#a855f7', totalAmount: 135, percentage: 6.4 },
+    { categoryId: 'cat-5', categoryName: 'Entertainment', parentId: null, color: '#ec4899', totalAmount: 95, percentage: 4.5 },
+  ],
+};
+
+// ─── Debt Schedule + Amortization ─────────────────────────────────────────────
+
+export const mockDebtSchedule: DebtSchedule = {
+  id: 'ds-1',
+  userId: 'u1',
+  accountId: 'acct-4',
+  principal: 25000,
+  annualRate: 0.0699,
+  termMonths: 60,
+  originationDate: '2023-01-01',
+  paymentAmount: 495.42,
+  createdAt: '2023-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+};
+
+export const mockAmortizationSchedule: AmortizationSchedule = {
+  schedule: [],
+  totalInterest: 4725.2,
+  payoffDate: '2028-01-01',
 };
 
 // ─── Dashboard Hints ──────────────────────────────────────────────────────────

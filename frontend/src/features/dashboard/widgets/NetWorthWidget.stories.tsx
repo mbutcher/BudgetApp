@@ -6,7 +6,8 @@ import { mockAccounts, mockNetWorthHistory } from './__fixtures__/mockData';
 function makeQC(accountData?: unknown, netWorthData?: unknown): QueryClient {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   if (accountData !== undefined) qc.setQueryData(['accounts'], accountData);
-  if (netWorthData !== undefined) qc.setQueryData(['reports', 'net-worth', 2], netWorthData);
+  // NetWorthWidget now uses 6 months of history for the sparkline
+  if (netWorthData !== undefined) qc.setQueryData(['reports', 'net-worth', 6], netWorthData);
   return qc;
 }
 

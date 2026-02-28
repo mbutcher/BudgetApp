@@ -13,6 +13,9 @@ import { MonthlyChartWidget } from '../widgets/MonthlyChartWidget';
 import { SavingsGoalsWidget } from '../widgets/SavingsGoalsWidget';
 import { RecentTransactionsWidget } from '../widgets/RecentTransactionsWidget';
 import { HintsWidget } from '../widgets/HintsWidget';
+import { SpendingByCategoryWidget } from '../widgets/SpendingByCategoryWidget';
+import { DebtPayoffWidget } from '../widgets/DebtPayoffWidget';
+import { TagSummaryWidget } from '../widgets/TagSummaryWidget';
 
 const ROW_HEIGHT = 80; // px per row unit
 const BREAKPOINTS = { xl: 1440, lg: 1024, sm: 640, xs: 0 };
@@ -34,15 +37,15 @@ function WidgetWrapper({
 }) {
   return (
     <div
-      className={`bg-white rounded-xl border border-gray-200 overflow-hidden h-full relative ${
-        isEditMode ? 'ring-2 ring-blue-300 ring-offset-1' : ''
+      className={`bg-card rounded-xl border border-border overflow-hidden h-full relative ${
+        isEditMode ? 'ring-2 ring-primary/40 ring-offset-1' : ''
       }`}
     >
       {isEditMode && (
-        <div className="drag-handle absolute top-0 left-0 right-0 h-7 bg-blue-50 border-b border-blue-100 cursor-grab flex items-center justify-center z-10">
+        <div className="drag-handle absolute top-0 left-0 right-0 h-7 bg-primary/5 border-b border-primary/20 cursor-grab flex items-center justify-center z-10">
           <div className="flex gap-1">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="w-1 h-1 bg-blue-300 rounded-full" />
+              <div key={i} className="w-1 h-1 bg-primary/40 rounded-full" />
             ))}
           </div>
         </div>
@@ -72,6 +75,12 @@ function renderWidget(id: WidgetId, excludedAccountIds: string[]) {
       return <RecentTransactionsWidget />;
     case 'hints':
       return <HintsWidget />;
+    case 'spending-by-category':
+      return <SpendingByCategoryWidget />;
+    case 'debt-payoff':
+      return <DebtPayoffWidget />;
+    case 'tag-summary':
+      return <TagSummaryWidget />;
     default:
       return null;
   }
@@ -108,8 +117,9 @@ export function DashboardGrid({ config, isEditMode, onLayoutChange }: Props) {
     [layouts, widgetVisibility],
   );
 
+  // 'warnings' is rendered as a full-width banner above the grid, not inside the layout
   const visibleIds = (Object.entries(widgetVisibility) as [WidgetId, boolean][])
-    .filter(([, v]) => v)
+    .filter(([id, v]) => v && id !== 'warnings')
     .map(([id]) => id);
 
   // Cast needed: useContainerWidth returns RefObject<HTMLDivElement | null> (React 19 style),
@@ -118,6 +128,8 @@ export function DashboardGrid({ config, isEditMode, onLayoutChange }: Props) {
 
   return (
     <div ref={divRef}>
+      {/* Warnings banner — always full width, auto height, hidden when empty */}
+      <WarningsWidget excludedAccountIds={excludedAccountIds} />
       {mounted && (
         <ResponsiveGridLayout
           width={width}

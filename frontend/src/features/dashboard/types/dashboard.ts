@@ -7,7 +7,12 @@ export type WidgetId =
   | 'monthly-chart'
   | 'savings-goals'
   | 'recent-transactions'
-  | 'hints';
+  | 'hints'
+  | 'spending-by-category'
+  | 'debt-payoff'
+  | 'tag-summary';
+
+export type WidgetCategory = 'overview' | 'budgeting' | 'savings' | 'spending' | 'debt';
 
 export interface GridLayoutItem {
   i: WidgetId;
@@ -50,8 +55,15 @@ export interface DashboardHint {
 export interface WidgetMeta {
   id: WidgetId;
   labelKey: string;
+  category: WidgetCategory;
+  /** Minimum grid columns */
+  minW: number;
+  /** Minimum grid rows */
+  minH: number;
   /** True for widgets that cannot be disabled or repositioned */
   alwaysOn?: boolean;
   /** Default h (row-height units) used when auto-placed */
   defaultH: number;
+  /** If set, widget is hidden in the tray unless this feature flag is enabled */
+  featureFlag?: string;
 }

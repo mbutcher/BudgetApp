@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useFormatters } from '@lib/i18n/useFormatters';
 import { useAccounts } from '@features/core/hooks/useAccounts';
 import { usePayPeriod, useUpcomingExpenses } from '@features/core/hooks/useBudgetView';
@@ -20,7 +21,6 @@ function getPeriodDates(key: PeriodKey, payPeriod: PayPeriod | null | undefined)
   switch (key) {
     case 'pay_period':
       if (payPeriod) return { start: payPeriod.start, end: payPeriod.end };
-      // Fallback: current month
       return {
         start: toLocalISO(new Date(today.getFullYear(), today.getMonth(), 1)),
         end: toLocalISO(new Date(today.getFullYear(), today.getMonth() + 1, 0)),
@@ -45,7 +45,6 @@ function getPeriodDates(key: PeriodKey, payPeriod: PayPeriod | null | undefined)
     case 'next_3_months':
       return {
         start: toLocalISO(today),
-        // day 0 of month+4 = last day of month+3
         end: toLocalISO(new Date(today.getFullYear(), today.getMonth() + 4, 0)),
       };
   }
@@ -54,6 +53,7 @@ function getPeriodDates(key: PeriodKey, payPeriod: PayPeriod | null | undefined)
 export function UpcomingExpenses() {
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodKey>('pay_period');
   const [showFlexible, setShowFlexible] = useState(false);
+  const { t } = useTranslation();
   const fmt = useFormatters();
   const { data: payPeriod } = usePayPeriod();
   const { data: accounts = [] } = useAccounts();
@@ -65,7 +65,6 @@ export function UpcomingExpenses() {
 
   const { data: upcoming, isLoading } = useUpcomingExpenses(start, end, showFlexible);
 
-  // Overdraft check: for each account, sum upcoming fixed items and compare to balance
   const overdraftAccountIds = useMemo(() => {
     if (!upcoming?.fixedItems.length) return new Set<string>();
     const sumsByAccount = new Map<string, number>();
@@ -91,38 +90,38 @@ export function UpcomingExpenses() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <div className="flex items-center gap-3">
-          <h2 className="text-base font-semibold text-gray-900">Upcoming Expenses</h2>
+          <h2 className="text-base font-semibold text-foreground">{t('dashboard.upcomingTitle')}</h2>
           <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value as PeriodKey)}
-            className="border border-gray-200 rounded-lg px-2.5 py-1 text-xs bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border border-border rounded-lg px-2.5 py-1 text-xs bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
-            <option value="pay_period">Pay period{payPeriod ? '' : ' (not set)'}</option>
-            <option value="this_month">This month</option>
-            <option value="next_30">Next 30 days</option>
-            <option value="next_month">Next month</option>
-            <option value="next_3_months">Next 3 months</option>
+            <option value="pay_period">
+              {payPeriod ? t('dashboard.upcomingPeriodPayPeriod') : t('dashboard.upcomingPeriodPayPeriodUnset')}
+            </option>
+            <option value="this_month">{t('dashboard.upcomingPeriodThisMonth')}</option>
+            <option value="next_30">{t('dashboard.upcomingPeriodNext30')}</option>
+            <option value="next_month">{t('dashboard.upcomingPeriodNextMonth')}</option>
+            <option value="next_3_months">{t('dashboard.upcomingPeriodNext3Months')}</option>
           </select>
-          <span className="text-xs text-gray-400">{periodLabel(start, end)}</span>
+          <span className="text-xs text-muted-foreground">{periodLabel(start, end)}</span>
         </div>
-        <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
+        <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
           <input
             type="checkbox"
             checked={showFlexible}
             onChange={(e) => setShowFlexible(e.target.checked)}
-            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="rounded border-border text-primary focus:ring-primary"
           />
-          Show flexible (est.)
+          {t('dashboard.upcomingShowFlexible')}
         </label>
       </div>
 
       {/* Overdraft warning */}
       {overdraftAccountIds.size > 0 && (
-        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
-          <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-amber-700">
-            One or more accounts may not have sufficient funds to cover upcoming fixed expenses this period.
-          </p>
+        <div className="flex items-start gap-2 bg-warning/10 border border-warning/30 rounded-lg px-3 py-2 mb-3">
+          <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-warning">{t('dashboard.upcomingOverdraft')}</p>
         </div>
       )}
 
@@ -130,28 +129,28 @@ export function UpcomingExpenses() {
       {isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-10 bg-gray-100 animate-pulse rounded-lg" />
+            <div key={i} className="h-10 bg-muted animate-pulse rounded-lg" />
           ))}
         </div>
       ) : !hasItems && !showFlexible ? (
-        <p className="text-sm text-gray-400 py-4 text-center">No fixed expenses scheduled this period.</p>
+        <p className="text-sm text-muted-foreground py-4 text-center">{t('dashboard.upcomingEmpty')}</p>
       ) : (
         <div className="space-y-1.5">
           {/* Fixed items */}
           {upcoming?.fixedItems.map((item, i) => (
             <div
               key={`${item.budgetLineId}-${item.date}-${i}`}
-              className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-sm"
+              className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <span className="font-medium text-gray-900 truncate">{item.name}</span>
+                <span className="font-medium text-foreground truncate">{item.name}</span>
                 {item.accountName && (
                   <span
                     className={[
                       'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium flex-shrink-0',
                       overdraftAccountIds.has(item.accountId!)
-                        ? 'bg-amber-100 text-amber-700'
-                        : 'bg-blue-50 text-blue-600',
+                        ? 'bg-warning/15 text-warning'
+                        : 'bg-primary/10 text-primary',
                     ].join(' ')}
                   >
                     {overdraftAccountIds.has(item.accountId!) && (
@@ -162,10 +161,10 @@ export function UpcomingExpenses() {
                 )}
               </div>
               <div className="flex items-center gap-3 flex-shrink-0 ml-3">
-                <span className="text-red-600 font-medium tabular-nums">
+                <span className="text-destructive font-medium tabular-nums">
                   {fmt.currency(item.amount)}
                 </span>
-                <span className="text-xs text-gray-400 tabular-nums w-14 text-right">
+                <span className="text-xs text-muted-foreground tabular-nums w-14 text-right">
                   {new Date(item.date + 'T00:00:00').toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}
                 </span>
               </div>
@@ -173,18 +172,19 @@ export function UpcomingExpenses() {
           ))}
 
           {/* Flexible items (est.) */}
-          {showFlexible && upcoming?.flexibleItems.map((item) => (
-            <div
-              key={item.budgetLineId}
-              className="flex items-center justify-between rounded-lg border border-dashed border-gray-200 px-3 py-2 text-sm"
-            >
-              <span className="text-gray-600 truncate">{item.name}</span>
-              <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                <span className="text-gray-500 tabular-nums">{fmt.currency(item.proratedAmount)}</span>
-                <span className="text-xs text-gray-400">est.</span>
+          {showFlexible &&
+            upcoming?.flexibleItems.map((item) => (
+              <div
+                key={item.budgetLineId}
+                className="flex items-center justify-between rounded-lg border border-dashed border-border px-3 py-2 text-sm"
+              >
+                <span className="text-muted-foreground truncate">{item.name}</span>
+                <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                  <span className="text-muted-foreground tabular-nums">{fmt.currency(item.proratedAmount)}</span>
+                  <span className="text-xs text-muted-foreground">est.</span>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       )}
     </div>

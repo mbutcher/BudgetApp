@@ -1,5 +1,5 @@
 import { AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAccounts } from '@features/core/hooks/useAccounts';
 import { useSavingsGoals, useSavingsGoalProgress } from '@features/core/hooks/useSavingsGoals';
@@ -32,22 +32,29 @@ interface GoalWarningProps {
   goalId: string;
   goalName: string;
   targetDate: string;
+  onActiveChange: (id: string, active: boolean) => void;
 }
 
-function GoalDeadlineWarning({ goalId, goalName, targetDate }: GoalWarningProps) {
+function GoalDeadlineWarning({ goalId, goalName, targetDate, onActiveChange }: GoalWarningProps) {
   const { t } = useTranslation();
   const { data: progress } = useSavingsGoalProgress(goalId);
   const daysLeft = Math.ceil(
     (new Date(targetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
   );
 
-  if (!progress || daysLeft > 30 || daysLeft < 0) return null;
-  const pct = progress.percentComplete;
-  const expectedPct = 100 - (daysLeft / 30) * (100 - pct);
-  if (pct >= expectedPct) return null;
+  const pct = progress?.percentComplete ?? -1;
+  const expectedPct = daysLeft <= 30 ? 100 - (daysLeft / 30) * (100 - pct) : Infinity;
+  const isActive = Boolean(progress && daysLeft <= 30 && daysLeft >= 0 && pct < expectedPct);
+
+  useEffect(() => {
+    onActiveChange(goalId, isActive);
+    return () => onActiveChange(goalId, false);
+  }, [goalId, isActive, onActiveChange]);
+
+  if (!isActive) return null;
 
   return (
-    <div className="flex items-center gap-2 text-amber-700 text-sm">
+    <div className="flex items-center gap-2 text-warning text-sm">
       <AlertTriangle className="h-4 w-4 flex-shrink-0" />
       <span>{t('dashboard.warningGoalBehindPace', { name: goalName, count: daysLeft })}</span>
     </div>
@@ -64,22 +71,26 @@ export function WarningsWidget({ excludedAccountIds }: Props) {
   const { data: goals = [] } = useSavingsGoals();
   const goalsWithDeadlines = goals.filter((g) => g.targetDate);
   const [collapsed, setCollapsed] = useState(false);
+  const [activeGoalWarnings, setActiveGoalWarnings] = useState<Set<string>>(new Set());
 
-  const hasContent = warnings.length > 0 || goalsWithDeadlines.length > 0;
+  const handleGoalActiveChange = useCallback((id: string, active: boolean) => {
+    setActiveGoalWarnings((prev) => {
+      if (prev.has(id) === active) return prev;
+      const next = new Set(prev);
+      if (active) next.add(id); else next.delete(id);
+      return next;
+    });
+  }, []);
 
-  if (!hasContent) {
-    return (
-      <div className="h-full flex items-center px-5 py-3">
-        <p className="text-sm text-gray-400">{t('dashboard.noWarnings')}</p>
-      </div>
-    );
-  }
+  const hasContent = warnings.length > 0 || activeGoalWarnings.size > 0;
+
+  if (!hasContent) return null;
 
   return (
-    <div className="h-full flex flex-col bg-amber-50 border border-amber-200 rounded-xl overflow-hidden">
+    <div className="mb-4 bg-warning/10 border border-warning/30 rounded-xl overflow-hidden">
       <button
         onClick={() => setCollapsed((c) => !c)}
-        className="flex items-center justify-between px-5 py-3 text-amber-800 font-medium text-sm flex-shrink-0 hover:bg-amber-100 transition-colors"
+        className="w-full flex items-center justify-between px-5 py-3 text-warning font-medium text-sm hover:bg-warning/10 transition-colors"
       >
         <div className="flex items-center gap-2">
           <AlertTriangle className="h-4 w-4" />
@@ -88,9 +99,9 @@ export function WarningsWidget({ excludedAccountIds }: Props) {
         {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
       </button>
       {!collapsed && (
-        <div className="px-5 pb-3 space-y-2 overflow-auto flex-1">
+        <div className="px-5 pb-3 space-y-2">
           {warnings.map((w) => (
-            <div key={w.id} className="flex items-center gap-2 text-amber-700 text-sm">
+            <div key={w.id} className="flex items-center gap-2 text-warning text-sm">
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />
               <span>{w.message}</span>
             </div>
@@ -101,6 +112,7 @@ export function WarningsWidget({ excludedAccountIds }: Props) {
               goalId={g.id}
               goalName={g.name}
               targetDate={g.targetDate!}
+              onActiveChange={handleGoalActiveChange}
             />
           ))}
         </div>

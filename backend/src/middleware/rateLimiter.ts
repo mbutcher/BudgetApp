@@ -1,23 +1,27 @@
+import type { RequestHandler } from 'express';
 import rateLimit from 'express-rate-limit';
 import { env } from '@config/env';
 import { TooManyRequestsError } from './errorHandler';
 
+// In development, rate limiting is disabled so repeated logins don't block local work.
+const noopLimiter: RequestHandler = (_req, _res, next) => next();
+
 /**
  * Rate limiter for credential-based auth endpoints (login, register, WebAuthn authenticate).
  * 5 requests per 15 minutes per IP address.
- * Uses in-memory store by default (suitable for single-process deployments).
- * For multi-process/multi-instance deployments, replace the store with
- * a Redis-backed store (rate-limit-redis package).
+ * Disabled in development.
  */
-export const authRateLimiter = rateLimit({
-  windowMs: env.rateLimit.loginWindowMs,
-  max: env.rateLimit.loginMaxRequests,
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (_req, _res, next) => {
-    next(new TooManyRequestsError('Too many authentication attempts. Please try again later.'));
-  },
-});
+export const authRateLimiter: RequestHandler = env.isDevelopment
+  ? noopLimiter
+  : rateLimit({
+      windowMs: env.rateLimit.loginWindowMs,
+      max: env.rateLimit.loginMaxRequests,
+      standardHeaders: true,
+      legacyHeaders: false,
+      handler: (_req, _res, next) => {
+        next(new TooManyRequestsError('Too many authentication attempts. Please try again later.'));
+      },
+    });
 
 /**
  * Rate limiter for the token refresh endpoint.
@@ -25,44 +29,50 @@ export const authRateLimiter = rateLimit({
  * by the frontend whenever an access token expires — it is not a user-initiated
  * credential attempt.
  * 30 requests per 15 minutes per IP address.
+ * Disabled in development.
  */
-export const refreshRateLimiter = rateLimit({
-  windowMs: env.rateLimit.loginWindowMs,
-  max: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (_req, _res, next) => {
-    next(new TooManyRequestsError('Too many token refresh requests. Please try again later.'));
-  },
-});
+export const refreshRateLimiter: RequestHandler = env.isDevelopment
+  ? noopLimiter
+  : rateLimit({
+      windowMs: env.rateLimit.loginWindowMs,
+      max: 30,
+      standardHeaders: true,
+      legacyHeaders: false,
+      handler: (_req, _res, next) => {
+        next(new TooManyRequestsError('Too many token refresh requests. Please try again later.'));
+      },
+    });
 
 /**
  * Rate limiter for WebAuthn authenticate endpoints (options + verify).
- * More lenient than the login limiter because a single authentication flow
- * requires two sequential requests, and a household with multiple passkey
- * devices may make several attempts in quick succession.
  * 15 requests per 15 minutes per IP address.
+ * Disabled in development.
  */
-export const webauthnRateLimiter = rateLimit({
-  windowMs: env.rateLimit.loginWindowMs,
-  max: 15,
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (_req, _res, next) => {
-    next(new TooManyRequestsError('Too many WebAuthn attempts. Please try again later.'));
-  },
-});
+export const webauthnRateLimiter: RequestHandler = env.isDevelopment
+  ? noopLimiter
+  : rateLimit({
+      windowMs: env.rateLimit.loginWindowMs,
+      max: 15,
+      standardHeaders: true,
+      legacyHeaders: false,
+      handler: (_req, _res, next) => {
+        next(new TooManyRequestsError('Too many WebAuthn attempts. Please try again later.'));
+      },
+    });
 
 /**
  * General API rate limiter for all other endpoints.
  * 100 requests per 15 minutes per IP address.
+ * Disabled in development.
  */
-export const apiRateLimiter = rateLimit({
-  windowMs: env.rateLimit.windowMs,
-  max: env.rateLimit.maxRequests,
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (_req, _res, next) => {
-    next(new TooManyRequestsError('Too many requests. Please try again later.'));
-  },
-});
+export const apiRateLimiter: RequestHandler = env.isDevelopment
+  ? noopLimiter
+  : rateLimit({
+      windowMs: env.rateLimit.windowMs,
+      max: env.rateLimit.maxRequests,
+      standardHeaders: true,
+      legacyHeaders: false,
+      handler: (_req, _res, next) => {
+        next(new TooManyRequestsError('Too many requests. Please try again later.'));
+      },
+    });

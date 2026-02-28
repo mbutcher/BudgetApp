@@ -1,13 +1,48 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Settings, Save, RotateCcw } from 'lucide-react';
 import type { Layout, ResponsiveLayouts } from 'react-grid-layout';
 import { useDashboardConfig, useSaveDashboardConfig } from '../hooks/useDashboardConfig';
 import { DashboardGrid } from '../components/DashboardGrid';
 import { WidgetTray } from '../components/WidgetTray';
-import { buildDefaultConfig } from '../widgetRegistry';
+import { buildDefaultConfig, DEFAULT_WIDGET_VISIBILITY, DEFAULT_LAYOUTS } from '../widgetRegistry';
 import { useAuthStore } from '@features/auth/stores/authStore';
 import type { DashboardConfig, WidgetId, GridLayoutItem } from '../types/dashboard';
+
+/** Fill in any new widget keys missing from a saved config (backwards-compat). */
+function migrateConfig(saved: DashboardConfig): DashboardConfig {
+  const allKeys = Object.keys(DEFAULT_WIDGET_VISIBILITY) as WidgetId[];
+  const visibility = { ...saved.widgetVisibility };
+  let visibilityDirty = false;
+  for (const key of allKeys) {
+    if (!(key in visibility)) {
+      visibility[key] = DEFAULT_WIDGET_VISIBILITY[key];
+      visibilityDirty = true;
+    }
+  }
+
+  // Ensure each layout breakpoint has entries for new widgets
+  const buildBp = (bp: keyof typeof saved.layouts) => {
+    const existing = saved.layouts[bp];
+    const existingIds = new Set(existing.map((i) => i.i));
+    const defaults = DEFAULT_LAYOUTS[bp];
+    const missing = defaults.filter((d) => !existingIds.has(d.i));
+    return missing.length > 0 ? [...existing, ...missing] : existing;
+  };
+
+  const xs = buildBp('xs');
+  const sm = buildBp('sm');
+  const lg = buildBp('lg');
+  const xl = buildBp('xl');
+  const layoutDirty =
+    xs !== saved.layouts.xs ||
+    sm !== saved.layouts.sm ||
+    lg !== saved.layouts.lg ||
+    xl !== saved.layouts.xl;
+
+  if (!visibilityDirty && !layoutDirty) return saved;
+  return { ...saved, widgetVisibility: visibility, layouts: { xs, sm, lg, xl } };
+}
 
 export function DashboardPage() {
   const { t } = useTranslation();
@@ -19,8 +54,12 @@ export function DashboardPage() {
   const [showTray, setShowTray] = useState(false);
   const [draftConfig, setDraftConfig] = useState<DashboardConfig | null>(null);
 
-  const activeConfig: DashboardConfig =
-    draftConfig ?? savedConfig ?? buildDefaultConfig(userId);
+  const baseConfig: DashboardConfig = useMemo(() => {
+    if (savedConfig) return migrateConfig(savedConfig);
+    return buildDefaultConfig(userId);
+  }, [savedConfig, userId]);
+
+  const activeConfig: DashboardConfig = draftConfig ?? baseConfig;
 
   const enterEditMode = () => {
     setDraftConfig(activeConfig);
@@ -86,10 +125,10 @@ export function DashboardPage() {
   if (isLoading) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="h-8 w-48 bg-gray-100 animate-pulse rounded mb-6" />
+        <div className="h-8 w-48 bg-muted animate-pulse rounded mb-6" />
         <div className="grid grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-40 bg-gray-100 animate-pulse rounded-xl" />
+            <div key={i} className="h-40 bg-muted animate-pulse rounded-xl" />
           ))}
         </div>
       </div>
@@ -100,27 +139,27 @@ export function DashboardPage() {
     <div className="relative">
       {/* Page header */}
       <div className="max-w-6xl mx-auto px-4 pt-6 pb-2 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">{t('dashboard.title')}</h1>
+        <h1 className="text-2xl font-bold text-foreground">{t('dashboard.title')}</h1>
         <div className="flex items-center gap-2">
           {isEditMode ? (
             <>
               <button
                 onClick={resetToDefaults}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg hover:bg-muted transition-colors"
               >
                 <RotateCcw className="h-4 w-4" />
                 {t('dashboard.resetDefaults')}
               </button>
               <button
                 onClick={() => exitEditMode(false)}
-                className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg hover:bg-muted transition-colors"
               >
                 {t('common.cancel')}
               </button>
               <button
                 onClick={() => exitEditMode(true)}
                 disabled={isSaving}
-                className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary-hover rounded-lg transition-colors disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
                 {isSaving ? t('common.saving') : t('common.save')}
@@ -129,7 +168,7 @@ export function DashboardPage() {
           ) : (
             <button
               onClick={enterEditMode}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg hover:bg-muted transition-colors"
             >
               <Settings className="h-4 w-4" />
               {t('dashboard.editDashboard')}
