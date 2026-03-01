@@ -1,9 +1,10 @@
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAccounts } from '../hooks/useAccounts';
 import { useCategories } from '../hooks/useCategories';
-import { useCreateTransaction, useUpdateTransaction } from '../hooks/useTransactions';
+import { useCreateTransaction, useUpdateTransaction, useAllTags } from '../hooks/useTransactions';
 import { getApiErrorMessage } from '@lib/api/errors';
 import type { Transaction } from '../types';
 
@@ -38,6 +39,12 @@ export function TransactionForm({
   const { data: categories = [] } = useCategories();
   const createTx = useCreateTransaction();
   const updateTx = useUpdateTransaction();
+  const { data: allTags = [] } = useAllTags();
+
+  const [tags, setTags] = useState<string[]>(transaction?.tags ?? []);
+  const [tagInput, setTagInput] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const tagInputRef = useRef<HTMLInputElement>(null);
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -54,7 +61,7 @@ export function TransactionForm({
           description: transaction.description ?? '',
           payee: transaction.payee ?? '',
           notes: transaction.notes ?? '',
-          date: transaction.date.split('T')[0],
+          date: transaction.date.split('T')[0] ?? '',
           categoryId: transaction.categoryId ?? '',
           isCleared: transaction.isCleared,
         }
@@ -67,6 +74,49 @@ export function TransactionForm({
 
   const error = createTx.error ?? updateTx.error;
 
+  const suggestions = useMemo(
+    () =>
+      tagInput.trim()
+        ? allTags.filter(
+            (t) => t.startsWith(tagInput.trim().toLowerCase()) && !tags.includes(t)
+          )
+        : [],
+    [tagInput, allTags, tags]
+  );
+
+  function addTag(raw: string) {
+    const normalized = raw.trim().toLowerCase();
+    if (normalized && !tags.includes(normalized)) {
+      setTags((prev) => [...prev, normalized]);
+    }
+    setTagInput('');
+    setShowSuggestions(false);
+  }
+
+  function removeTag(tag: string) {
+    setTags((prev) => prev.filter((t) => t !== tag));
+  }
+
+  function handleTagKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addTag(tagInput);
+    } else if (e.key === 'Backspace' && tagInput === '' && tags.length > 0) {
+      removeTag(tags[tags.length - 1]!);
+    }
+  }
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (tagInputRef.current && !tagInputRef.current.closest('.tag-input-wrapper')?.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
   async function onSubmit(data: TransactionFormData) {
     const payload = {
       accountId: data.accountId,
@@ -76,6 +126,7 @@ export function TransactionForm({
       notes: data.notes || undefined,
       date: data.date,
       categoryId: data.categoryId || undefined,
+      tags,
     };
 
     if (isEditing && transaction) {
@@ -196,6 +247,67 @@ export function TransactionForm({
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
         <textarea {...register('notes')} rows={2} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Tags <span className="text-gray-400 text-xs">(optional — press Enter or comma to add)</span>
+        </label>
+        <div className="tag-input-wrapper relative">
+          <div className="flex flex-wrap gap-1.5 items-center min-h-[38px] border border-gray-300 rounded-lg px-2 py-1.5 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
+            {tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 rounded px-1.5 py-0.5"
+              >
+                #{tag}
+                <button
+                  type="button"
+                  onClick={() => removeTag(tag)}
+                  className="text-blue-500 hover:text-blue-800 leading-none"
+                  aria-label={`Remove tag ${tag}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            <input
+              ref={tagInputRef}
+              type="text"
+              value={tagInput}
+              onChange={(e) => {
+                setTagInput(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onKeyDown={handleTagKeyDown}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => {
+                // Delay so suggestion clicks register first
+                setTimeout(() => setShowSuggestions(false), 150);
+              }}
+              className="flex-1 min-w-[80px] text-sm outline-none bg-transparent"
+              placeholder={tags.length === 0 ? 'vacation, dining…' : ''}
+            />
+          </div>
+          {showSuggestions && suggestions.length > 0 && (
+            <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-md max-h-40 overflow-y-auto">
+              {suggestions.map((s) => (
+                <li key={s}>
+                  <button
+                    type="button"
+                    className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      addTag(s);
+                    }}
+                  >
+                    #{s}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
 
       {isEditing && (

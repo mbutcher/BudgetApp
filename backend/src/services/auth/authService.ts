@@ -245,7 +245,7 @@ class AuthService {
   private async issueTokens(
     userId: string,
     meta: RequestMeta,
-    lastUsedAt?: Date,
+    lastUsedAt?: Date
   ): Promise<AuthTokens> {
     const accessToken = tokenService.signAccessToken(userId);
     const rawRefreshToken = tokenService.signRefreshToken(userId);

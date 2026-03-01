@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { asyncHandler, AppError } from '@middleware/errorHandler';
 import { getDatabase } from '@config/database';
 import { encryptionService } from '@services/encryption/encryptionService';
+import { transactionTagRepository } from '@repositories/transactionTagRepository';
 import type {
   Account,
   Category,
@@ -113,6 +114,9 @@ class SyncController {
       updatedAt: new Date(String(r['updated_at'])),
     }));
 
+    const txIds = (txRows as Record<string, unknown>[]).map((r) => String(r['id']));
+    const tagMap = await transactionTagRepository.findByTransactionIds(txIds);
+
     const transactions: PublicTransaction[] = (txRows as Record<string, unknown>[]).map((r) => ({
       id: String(r['id']),
       userId: String(r['user_id']),
@@ -128,6 +132,7 @@ class SyncController {
       isCleared: Boolean(r['is_cleared']),
       createdAt: new Date(String(r['created_at'])),
       updatedAt: new Date(String(r['updated_at'])),
+      tags: tagMap.get(String(r['id'])) ?? [],
     }));
 
     const budgets: Budget[] = (budgetRows as Record<string, unknown>[]).map((r) => ({

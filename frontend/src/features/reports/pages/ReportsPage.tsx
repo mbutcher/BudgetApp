@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useFormatters } from '@lib/i18n/useFormatters';
 import { Button } from '@components/ui/button';
@@ -10,6 +11,7 @@ import {
   useNetWorthHistory,
   useTakeNetWorthSnapshot,
   useTopPayees,
+  useTagSummary,
 } from '@features/core/hooks/useReports';
 import { toLocalISO } from '@lib/budget/budgetViewUtils';
 
@@ -228,12 +230,17 @@ function NetWorthTab() {
 
 function TopPayeesTab() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [period, setPeriod] = useState('this_month');
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [limit, setLimit] = useState(10);
   const { start, end } = useMemo(() => getPeriodDates(period), [period]);
   const { data, isLoading } = useTopPayees(start, end, limit, type);
   const fmt = useFormatters();
+
+  function handlePayeeClick(payee: string): void {
+    navigate(`/transactions?q=${encodeURIComponent(payee)}`);
+  }
 
   return (
     <div className="space-y-4">
@@ -302,13 +309,13 @@ function TopPayeesTab() {
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium text-gray-700">
-              Total: {fmt.currency(data.total)}
+              {t('reports.total')}: {fmt.currency(data.total)}
             </span>
             <span className="text-xs text-gray-400">
               {data.start} – {data.end}
             </span>
           </div>
-          <TopPayeesBarChart payees={data.payees} total={data.total} />
+          <TopPayeesBarChart payees={data.payees} total={data.total} onPayeeClick={handlePayeeClick} />
         </div>
       ) : (
         <div className="text-center py-16 text-gray-400 text-sm">{t('reports.noData')}</div>
@@ -317,9 +324,101 @@ function TopPayeesTab() {
   );
 }
 
+// ─── Tags Tab ─────────────────────────────────────────────────────────────────
+
+function TagsTab() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [period, setPeriod] = useState('this_month');
+  const [type, setType] = useState<'expense' | 'income'>('expense');
+  const { start, end } = useMemo(() => getPeriodDates(period), [period]);
+  const { data, isLoading } = useTagSummary(start, end, type);
+  const fmt = useFormatters();
+
+  const tags = data?.tags ?? [];
+  const chartData = [...tags].reverse();
+
+  function handleTagClick(tag: string): void {
+    navigate(`/transactions?tag=${encodeURIComponent(tag)}`);
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Controls */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">{t('reports.period')}</label>
+          <select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white"
+          >
+            <option value="this_month">{t('reports.thisMonth')}</option>
+            <option value="last_month">{t('reports.lastMonth')}</option>
+            <option value="last_3_months">{t('reports.last3Months')}</option>
+            <option value="last_6_months">{t('reports.last6Months')}</option>
+            <option value="this_year">{t('reports.thisYear')}</option>
+            <option value="last_year">{t('reports.lastYear')}</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">{t('reports.type')}</label>
+          <div className="flex border border-gray-200 rounded-lg overflow-hidden text-sm">
+            <button
+              onClick={() => setType('expense')}
+              className={[
+                'px-3 py-1.5 transition-colors',
+                type === 'expense'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-50',
+              ].join(' ')}
+            >
+              {t('reports.expenses')}
+            </button>
+            <button
+              onClick={() => setType('income')}
+              className={[
+                'px-3 py-1.5 transition-colors',
+                type === 'income'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-50',
+              ].join(' ')}
+            >
+              {t('reports.income')}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Chart */}
+      {isLoading ? (
+        <div className="h-72 bg-gray-100 animate-pulse rounded-xl" />
+      ) : data && chartData.length > 0 ? (
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium text-gray-700">
+              {t('reports.tagSummaryTitle')}: {fmt.currency(data.total)}
+            </span>
+            <span className="text-xs text-gray-400">
+              {data.start} – {data.end}
+            </span>
+          </div>
+          <TopPayeesBarChart
+            payees={chartData.map((item) => ({ payee: item.tag, totalAmount: item.totalAmount, percentage: item.percentage }))}
+            total={data.total}
+            onPayeeClick={handleTagClick}
+          />
+        </div>
+      ) : (
+        <div className="text-center py-16 text-gray-400 text-sm">{t('reports.noTagData')}</div>
+      )}
+    </div>
+  );
+}
+
 // ─── ReportsPage ──────────────────────────────────────────────────────────────
 
-type Tab = 'spending' | 'networth' | 'payees';
+type Tab = 'spending' | 'networth' | 'payees' | 'tags';
 
 export function ReportsPage() {
   const { t } = useTranslation();
@@ -329,6 +428,7 @@ export function ReportsPage() {
     { id: 'spending', label: t('reports.spending') },
     { id: 'networth', label: t('reports.netWorth') },
     { id: 'payees', label: t('reports.topPayees') },
+    { id: 'tags', label: t('reports.tags') },
   ];
 
   return (
@@ -361,6 +461,7 @@ export function ReportsPage() {
       {tab === 'spending' && <SpendingTab />}
       {tab === 'networth' && <NetWorthTab />}
       {tab === 'payees' && <TopPayeesTab />}
+      {tab === 'tags' && <TagsTab />}
     </div>
   );
 }

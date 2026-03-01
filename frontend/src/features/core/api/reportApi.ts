@@ -3,6 +3,7 @@ import type {
   ForecastMonth,
   NetWorthSnapshot,
   SpendingByCategoryResponse,
+  TagSummaryResponse,
   TopPayeesResponse,
 } from '../types';
 
@@ -50,5 +51,10 @@ export const reportApi = {
   ) =>
     apiClient.get<ApiResponse<TopPayeesResponse>>(
       `/reports/top-payees?start=${start}&end=${end}&limit=${limit}&type=${type}`
+    ),
+
+  tagSummary: (start: string, end: string, type: 'expense' | 'income' = 'expense') =>
+    apiClient.get<ApiResponse<TagSummaryResponse>>(
+      `/reports/tag-summary?start=${start}&end=${end}&type=${type}`
     ),
 };

@@ -331,6 +331,7 @@
     "debtPayoffUnknown": "—",
     "tagSummary": "Résumé des étiquettes",
     "tagSummaryComingSoon": "Le résumé des étiquettes sera disponible une fois l'étiquetage des transactions activé.",
+    "tagSummaryEmpty": "Aucune étiquette pour l'instant. Ajoutez des étiquettes aux transactions pour voir un résumé ici.",
     "projectedCompletion": "Prévu : {{date}}",
     "behindPace": "En retard",
     "widgets": {
@@ -404,7 +405,9 @@
     "showing": "Affichage de {{count}} sur {{total}}",
     "page": "Page {{page}} sur {{totalPages}}",
     "prevPage": "Précédent",
-    "nextPage": "Suivant"
+    "nextPage": "Suivant",
+    "filterTag": "Étiquette",
+    "allTags": "Toutes les étiquettes"
   },
   "recurring": {
     "title": "Transactions récurrentes",
@@ -531,7 +534,12 @@
     "payees5": "5 bénéficiaires",
     "payees10": "10 bénéficiaires",
     "payees20": "20 bénéficiaires",
-    "snapshotError": "Échec de l'instantané. Veuillez réessayer."
+    "snapshotError": "Échec de l'instantané. Veuillez réessayer.",
+    "noPayeeData": "Aucune donnée de bénéficiaire pour cette période.",
+    "total": "Total",
+    "tags": "Étiquettes",
+    "noTagData": "Aucune donnée d'étiquette pour cette période.",
+    "tagSummaryTitle": "Étiquettes"
   },
   "simplefin": {
     "title": "Intégration SimpleFIN",

@@ -238,3 +238,48 @@ paths:
                   status: { type: string, enum: [success] }
                   data: { $ref: '#/components/schemas/TopPayeesResponse' }
         '401': { $ref: '#/components/responses/UnauthorizedError' }
+
+  /reports/tag-summary:
+    get:
+      summary: Tag summary by spend
+      description: Returns total spend per tag for the given period.
+      tags: [Analytics]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: start
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: end
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: type
+          in: query
+          schema: { type: string, enum: [expense, income], default: expense }
+      responses:
+        '200':
+          description: Tag summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [success] }
+                  data:
+                    type: object
+                    properties:
+                      start:  { type: string, format: date }
+                      end:    { type: string, format: date }
+                      type:   { type: string, enum: [expense, income] }
+                      total:  { type: number }
+                      tags:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            tag:         { type: string }
+                            totalAmount: { type: number }
+                            percentage:  { type: number }
+                            count:       { type: integer }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }

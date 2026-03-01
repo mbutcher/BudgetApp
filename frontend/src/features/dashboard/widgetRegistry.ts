@@ -17,7 +17,7 @@ export const WIDGET_META: WidgetMeta[] = [
   // Spending
   { id: 'spending-by-category', labelKey: 'dashboard.widgets.spendingByCategory', category: 'spending', minW: 3, minH: 3, defaultH: 5 },
   { id: 'recent-transactions', labelKey: 'dashboard.widgets.recentTransactions', category: 'spending', minW: 3, minH: 3, defaultH: 6 },
-  { id: 'tag-summary', labelKey: 'dashboard.widgets.tagSummary', category: 'spending', minW: 3, minH: 2, defaultH: 4, featureFlag: 'tagging' },
+  { id: 'tag-summary', labelKey: 'dashboard.widgets.tagSummary', category: 'spending', minW: 3, minH: 2, defaultH: 4 },
   // Debt
   { id: 'debt-payoff', labelKey: 'dashboard.widgets.debtPayoff', category: 'debt', minW: 3, minH: 3, defaultH: 4 },
 ];

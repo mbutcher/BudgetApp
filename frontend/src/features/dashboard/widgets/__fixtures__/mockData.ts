@@ -137,6 +137,7 @@ const baseTransaction: Transaction = {
   isCleared: true,
   createdAt: '2026-02-20T10:00:00Z',
   updatedAt: '2026-02-20T10:00:00Z',
+  tags: [],
 };
 
 export const mockTransactionList: Transaction[] = [

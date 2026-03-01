@@ -1,5 +1,6 @@
 import { getDatabase } from '@config/database';
 import { transactionRepository } from '@repositories/transactionRepository';
+import { transactionTagRepository } from '@repositories/transactionTagRepository';
 import { transactionLinkRepository } from '@repositories/transactionLinkRepository';
 import { transactionSearchRepository } from '@repositories/transactionSearchRepository';
 import { accountRepository } from '@repositories/accountRepository';
@@ -30,13 +31,21 @@ export interface CreateTransactionResult {
   transferCandidates: TransferCandidate[];
 }
 
-function decryptTransaction(tx: Transaction): PublicTransaction {
+function decryptTransaction(tx: Transaction, tags: string[] = []): PublicTransaction {
   return {
     ...tx,
     description: tx.description ? encryptionService.decrypt(tx.description) : null,
     payee: tx.payee ? encryptionService.decrypt(tx.payee) : null,
     notes: tx.notes ? encryptionService.decrypt(tx.notes) : null,
+    tags,
   };
+}
+
+/** Fire-and-forget: persist tags for a transaction. */
+function saveTags(transactionId: string, userId: string, tags: string[]): void {
+  void transactionTagRepository.setTags(transactionId, userId, tags).catch((err: unknown) => {
+    logger.warn('Failed to save transaction tags', { transactionId, err });
+  });
 }
 
 /** Fire-and-forget: build search index for a transaction from plaintext payee/description. */
@@ -73,20 +82,30 @@ class TransactionService {
       const tokenHashes = tokens.map((t) => encryptionService.hash(t));
       const allowedIds = await transactionSearchRepository.findMatchingIds(userId, tokenHashes);
       const result = await transactionRepository.findAll(userId, { ...filters, allowedIds });
-      return { ...result, data: result.data.map(decryptTransaction) };
+      const tagMap = await transactionTagRepository.findByTransactionIds(
+        result.data.map((t) => t.id)
+      );
+      return {
+        ...result,
+        data: result.data.map((tx) => decryptTransaction(tx, tagMap.get(tx.id) ?? [])),
+      };
     }
 
     const result = await transactionRepository.findAll(userId, filters);
+    const tagMap = await transactionTagRepository.findByTransactionIds(
+      result.data.map((t) => t.id)
+    );
     return {
       ...result,
-      data: result.data.map(decryptTransaction),
+      data: result.data.map((tx) => decryptTransaction(tx, tagMap.get(tx.id) ?? [])),
     };
   }
 
   async getTransaction(userId: string, id: string): Promise<PublicTransaction> {
     const tx = await transactionRepository.findById(id, userId);
     if (!tx) throw new AppError('Transaction not found', 404);
-    return decryptTransaction(tx);
+    const tagMap = await transactionTagRepository.findByTransactionIds([id]);
+    return decryptTransaction(tx, tagMap.get(id) ?? []);
   }
 
   /**
@@ -116,7 +135,15 @@ class TransactionService {
       await accountRepository.updateBalance(input.accountId, input.amount, trx);
     });
 
-    const publicTx = decryptTransaction(createdTx!);
+    // Fire-and-forget: persist tags if provided
+    if (input.tags?.length) {
+      saveTags(createdTx!.id, userId, input.tags);
+    }
+
+    const publicTx = decryptTransaction(
+      createdTx!,
+      input.tags?.length ? input.tags.map((t) => t.trim().toLowerCase()).filter(Boolean) : []
+    );
 
     // Auto-split payment into principal/interest for loan/mortgage/credit_card accounts
     const debtAccountTypes = ['loan', 'mortgage', 'credit_card'];
@@ -192,7 +219,13 @@ class TransactionService {
       indexTransaction(id, userId, newPayee, newDesc);
     }
 
-    return decryptTransaction(updated!);
+    // Fire-and-forget: update tags if provided (undefined = no change, [] = clear all)
+    if (input.tags !== undefined) {
+      saveTags(id, userId, input.tags);
+    }
+
+    const tagMap = await transactionTagRepository.findByTransactionIds([id]);
+    return decryptTransaction(updated!, tagMap.get(id) ?? []);
   }
 
   /**

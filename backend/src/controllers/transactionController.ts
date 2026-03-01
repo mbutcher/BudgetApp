@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { asyncHandler } from '@middleware/errorHandler';
 import { transactionService } from '@services/core/transactionService';
+import { transactionTagRepository } from '@repositories/transactionTagRepository';
 import type {
   CreateTransactionData,
   UpdateTransactionData,
@@ -18,6 +19,7 @@ class TransactionController {
       endDate: query['endDate'],
       isTransfer: query['isTransfer'] !== undefined ? query['isTransfer'] === 'true' : undefined,
       q: query['q']?.trim() || undefined,
+      tag: query['tag']?.trim().toLowerCase() || undefined,
       page: query['page'] ? parseInt(query['page'], 10) : 1,
       limit: query['limit'] ? Math.min(parseInt(query['limit'], 10), 100) : 50,
     };
@@ -72,6 +74,11 @@ class TransactionController {
   unlink = asyncHandler(async (req: Request, res: Response) => {
     await transactionService.unlinkTransactions(req.user!.id, req.params['id']!);
     res.json({ status: 'success', data: null });
+  });
+
+  listTags = asyncHandler(async (req: Request, res: Response) => {
+    const tags = await transactionTagRepository.findAllForUser(req.user!.id);
+    res.json({ status: 'success', data: { tags } });
   });
 }
 

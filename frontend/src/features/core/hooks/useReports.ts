@@ -62,6 +62,21 @@ export function useTopPayees(
   });
 }
 
+export function useTagSummary(
+  start: string,
+  end: string,
+  type: 'expense' | 'income' = 'expense',
+) {
+  return useQuery({
+    queryKey: ['reports', 'tag-summary', start, end, type],
+    queryFn: async () => {
+      const res = await reportApi.tagSummary(start, end, type);
+      return res.data.data;
+    },
+    enabled: Boolean(start && end),
+  });
+}
+
 export function useTakeNetWorthSnapshot() {
   const qc = useQueryClient();
   return useMutation({

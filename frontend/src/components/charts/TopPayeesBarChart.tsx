@@ -8,12 +8,14 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
+import { useTranslation } from 'react-i18next';
 import { useFormatters } from '@lib/i18n/useFormatters';
 import type { TopPayeeItem } from '@features/core/types';
 
 interface TopPayeesBarChartProps {
   payees: TopPayeeItem[];
   total: number;
+  onPayeeClick?: (payee: string) => void;
 }
 
 const BAR_COLORS = [
@@ -21,13 +23,14 @@ const BAR_COLORS = [
   '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6',
 ];
 
-export function TopPayeesBarChart({ payees }: TopPayeesBarChartProps) {
+export function TopPayeesBarChart({ payees, onPayeeClick }: TopPayeesBarChartProps) {
+  const { t } = useTranslation();
   const fmt = useFormatters();
 
   if (payees.length === 0) {
     return (
-      <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
-        No payee data for this period.
+      <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">
+        {t('reports.noPayeeData')}
       </div>
     );
   }
@@ -57,10 +60,15 @@ export function TopPayeesBarChart({ payees }: TopPayeesBarChartProps) {
           tickLine={false}
         />
         <Tooltip
-          formatter={(value: number) => [fmt.currency(value), 'Total']}
+          formatter={(value: number) => [fmt.currency(value), t('reports.total')]}
           labelFormatter={(label: string) => label}
         />
-        <Bar dataKey="totalAmount" radius={[0, 4, 4, 0]}>
+        <Bar
+          dataKey="totalAmount"
+          radius={[0, 4, 4, 0]}
+          cursor={onPayeeClick ? 'pointer' : 'default'}
+          onClick={onPayeeClick ? (data: TopPayeeItem) => onPayeeClick(data.payee) : undefined}
+        >
           {chartData.map((_, index) => (
             <Cell
               key={index}

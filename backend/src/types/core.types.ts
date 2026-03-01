@@ -109,6 +109,8 @@ export interface PublicTransaction extends Omit<Transaction, 'description' | 'pa
   description: string | null;
   payee: string | null;
   notes: string | null;
+  /** Plaintext freeform tags — enriched post-fetch by the service layer */
+  tags: string[];
 }
 
 export interface CreateTransactionData {
@@ -122,6 +124,7 @@ export interface CreateTransactionData {
   categoryId?: string;
   /** Set when importing from SimpleFIN — used for deduplication on subsequent syncs */
   simplefinTransactionId?: string;
+  tags?: string[];
 }
 
 export interface UpdateTransactionData {
@@ -133,6 +136,7 @@ export interface UpdateTransactionData {
   date?: string;
   categoryId?: string | null;
   isCleared?: boolean;
+  tags?: string[];
 }
 
 export interface TransactionFilters {
@@ -143,6 +147,8 @@ export interface TransactionFilters {
   isTransfer?: boolean;
   /** Plaintext full-text search query. Matched against payee and description via HMAC token index. */
   q?: string;
+  /** Filter by a single tag (exact match, lowercase) */
+  tag?: string;
   page: number;
   limit: number;
 }
@@ -585,6 +591,23 @@ export interface TopPayeesResponse {
   type: 'expense' | 'income';
   total: number;
   payees: TopPayeeItem[];
+}
+
+// ─── Tag Summary ──────────────────────────────────────────────────────────────
+
+export interface TagSummaryItem {
+  tag: string;
+  totalAmount: number;
+  percentage: number;
+  count: number;
+}
+
+export interface TagSummaryResponse {
+  start: string;
+  end: string;
+  type: 'expense' | 'income';
+  total: number;
+  tags: TagSummaryItem[];
 }
 
 // ─── Forecast ─────────────────────────────────────────────────────────────────

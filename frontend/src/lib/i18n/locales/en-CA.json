@@ -331,6 +331,7 @@
     "debtPayoffUnknown": "—",
     "tagSummary": "Tag Summary",
     "tagSummaryComingSoon": "Tag summary will be available once transaction tagging is enabled.",
+    "tagSummaryEmpty": "No tags yet. Add tags to transactions to see a summary here.",
     "projectedCompletion": "Projected: {{date}}",
     "behindPace": "Behind pace",
     "widgets": {
@@ -404,7 +405,9 @@
     "showing": "Showing {{count}} of {{total}}",
     "page": "Page {{page}} of {{totalPages}}",
     "prevPage": "Previous",
-    "nextPage": "Next"
+    "nextPage": "Next",
+    "filterTag": "Tag",
+    "allTags": "All tags"
   },
   "recurring": {
     "title": "Recurring Transactions",
@@ -531,7 +534,12 @@
     "payees5": "5 payees",
     "payees10": "10 payees",
     "payees20": "20 payees",
-    "snapshotError": "Failed to take snapshot. Please try again."
+    "snapshotError": "Failed to take snapshot. Please try again.",
+    "noPayeeData": "No payee data for this period.",
+    "total": "Total",
+    "tags": "Tags",
+    "noTagData": "No tag data for this period.",
+    "tagSummaryTitle": "Tags"
   },
   "simplefin": {
     "title": "SimpleFIN Integration",

@@ -9,6 +9,8 @@ import type {
   LinkType,
 } from '../types';
 
+export const TAGS_QUERY_KEY = ['tags'] as const;
+
 interface ApiResponse<T> {
   status: string;
   data: T;
@@ -46,4 +48,7 @@ export const transactionApi = {
 
   unlink: (id: string) =>
     apiClient.delete<ApiResponse<null>>(`/transactions/${id}/link`),
+
+  listTags: () =>
+    apiClient.get<ApiResponse<{ tags: string[] }>>('/transactions/tags'),
 };

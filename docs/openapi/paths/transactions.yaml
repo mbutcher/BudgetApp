@@ -17,6 +17,10 @@ components:
         isCleared:   { type: boolean }
         createdAt:   { type: string, format: date-time }
         updatedAt:   { type: string, format: date-time }
+        tags:
+          type: array
+          items: { type: string }
+          description: Freeform plaintext tags (lowercase, trimmed)
 
     TransferCandidate:
       type: object
@@ -35,6 +39,10 @@ components:
         notes:       { type: string }
         date:        { type: string, format: date, example: '2026-02-18' }
         categoryId:  { type: string, format: uuid }
+        tags:
+          type: array
+          items: { type: string, maxLength: 50 }
+          maxItems: 20
 
     UpdateTransactionRequest:
       type: object
@@ -47,6 +55,10 @@ components:
         date:        { type: string, format: date }
         categoryId:  { type: ['string', 'null'], format: uuid }
         isCleared:   { type: boolean }
+        tags:
+          type: array
+          items: { type: string, maxLength: 50 }
+          maxItems: 20
 
     CreateTransactionResponse:
       type: object
@@ -71,6 +83,29 @@ components:
         totalPages: { type: integer }
 
 paths:
+  /transactions/tags:
+    get:
+      summary: List all tags used by the user
+      description: Returns all distinct tags across all transactions, sorted alphabetically. Used for autocomplete.
+      tags: [Transactions]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Distinct tags list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [success] }
+                  data:
+                    type: object
+                    properties:
+                      tags:
+                        type: array
+                        items: { type: string }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+
   /transactions:
     get:
       summary: List transactions
@@ -96,6 +131,10 @@ paths:
         - name: q
           in: query
           description: Full-text search query. AND semantics — all words must match.
+          schema: { type: string }
+        - name: tag
+          in: query
+          description: Filter by a single tag (exact match, lowercase).
           schema: { type: string }
         - name: page
           in: query

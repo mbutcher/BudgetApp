@@ -81,6 +81,14 @@ export function TransactionList({ filters, onEdit, onPageChange }: TransactionLi
                     {account && <span className="text-xs text-gray-400">· {account.name}</span>}
                     <CategoryBadge category={category} />
                     {tx.isCleared && <span className="text-xs text-green-500">✓</span>}
+                    {tx.tags?.slice(0, 3).map((tag) => (
+                      <span key={tag} className="text-xs bg-muted text-muted-foreground rounded px-1.5 py-0.5">
+                        #{tag}
+                      </span>
+                    ))}
+                    {(tx.tags?.length ?? 0) > 3 && (
+                      <span className="text-xs text-muted-foreground">+{tx.tags!.length - 3}</span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">

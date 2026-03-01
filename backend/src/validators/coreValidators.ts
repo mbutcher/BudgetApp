@@ -93,6 +93,7 @@ export const createTransactionSchema = Joi.object({
     'string.pattern.base': 'Date must be in YYYY-MM-DD format',
   }),
   categoryId: Joi.string().uuid().optional().allow(null),
+  tags: Joi.array().items(Joi.string().trim().lowercase().max(50)).max(20).optional(),
 });
 
 export const updateTransactionSchema = Joi.object({
@@ -104,6 +105,7 @@ export const updateTransactionSchema = Joi.object({
   date: Joi.string().pattern(ISO_DATE),
   categoryId: Joi.string().uuid().allow(null),
   isCleared: Joi.boolean(),
+  tags: Joi.array().items(Joi.string().trim().lowercase().max(50)).max(20),
 }).min(1);
 
 export const transactionFiltersSchema = Joi.object({

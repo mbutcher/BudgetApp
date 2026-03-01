@@ -96,6 +96,7 @@ export interface Transaction {
   isCleared: boolean;
   createdAt: string;
   updatedAt: string;
+  tags: string[];
 }
 
 export interface CreateTransactionInput {
@@ -106,6 +107,7 @@ export interface CreateTransactionInput {
   notes?: string;
   date: string;
   categoryId?: string;
+  tags?: string[];
 }
 
 export interface UpdateTransactionInput {
@@ -117,6 +119,7 @@ export interface UpdateTransactionInput {
   date?: string;
   categoryId?: string | null;
   isCleared?: boolean;
+  tags?: string[];
 }
 
 export interface TransactionFilters {
@@ -127,6 +130,8 @@ export interface TransactionFilters {
   isTransfer?: boolean;
   /** Plaintext full-text search query matched against payee and description. */
   q?: string;
+  /** Filter by a single tag (exact match, lowercase). */
+  tag?: string;
   page?: number;
   limit?: number;
 }
@@ -553,4 +558,21 @@ export interface TopPayeesResponse {
   type: 'expense' | 'income';
   total: number;
   payees: TopPayeeItem[];
+}
+
+// ─── Tag Summary ──────────────────────────────────────────────────────────────
+
+export interface TagSummaryItem {
+  tag: string;
+  totalAmount: number;
+  percentage: number;
+  count: number;
+}
+
+export interface TagSummaryResponse {
+  start: string;
+  end: string;
+  type: 'expense' | 'income';
+  total: number;
+  tags: TagSummaryItem[];
 }

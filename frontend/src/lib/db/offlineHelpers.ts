@@ -155,6 +155,7 @@ export function buildLocalTransaction(
     payee?: string;
     notes?: string;
     date: string;
+    tags?: string[];
     categoryId?: string;
   },
   localId: string,
@@ -175,5 +176,6 @@ export function buildLocalTransaction(
     isCleared: false,
     createdAt: now,
     updatedAt: now,
+    tags: data.tags ?? [],
   };
 }

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAccounts } from '../hooks/useAccounts';
 import { useCategories } from '../hooks/useCategories';
+import { useAllTags } from '../hooks/useTransactions';
 import { TransactionList } from '../components/TransactionList';
 import { TransactionForm } from '../components/TransactionForm';
 import { TransferLinkingDialog } from '../components/TransferLinkingDialog';
@@ -10,16 +12,25 @@ import type { Transaction, TransactionFilters, TransferCandidate } from '../type
 
 export function TransactionsPage() {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
   const { data: accounts = [] } = useAccounts();
   const { data: categories = [] } = useCategories();
+  const { data: allTags = [] } = useAllTags();
   const isOnline = useNetworkStore((s) => s.isOnline);
 
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [pendingLink, setPendingLink] = useState<{ txId: string; candidates: TransferCandidate[] } | null>(null);
 
-  const [filters, setFilters] = useState<TransactionFilters>({ page: 1, limit: 50 });
-  const [searchInput, setSearchInput] = useState('');
+  const initialQ = searchParams.get('q') ?? '';
+  const initialTag = searchParams.get('tag') ?? '';
+  const [filters, setFilters] = useState<TransactionFilters>({
+    page: 1,
+    limit: 50,
+    q: initialQ || undefined,
+    tag: initialTag || undefined,
+  });
+  const [searchInput, setSearchInput] = useState(initialQ);
 
   // Debounce search input → update filters.q after 300 ms idle
   useEffect(() => {
@@ -90,29 +101,44 @@ export function TransactionsPage() {
           </div>
         </div>
 
-        {/* Search row */}
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">{t('transactions.searchPlaceholder')}</label>
-          <div className="relative">
-            <input
-              type="text"
-              className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm pr-8 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
-              placeholder={isOnline ? t('transactions.searchPlaceholderShort') : t('transactions.searchOffline')}
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              disabled={!isOnline}
-              title={!isOnline ? t('transactions.searchOffline') : undefined}
-            />
-            {searchInput && (
-              <button
-                type="button"
-                onClick={() => setSearchInput('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg leading-none"
-                aria-label="Clear search"
-              >
-                ×
-              </button>
-            )}
+        {/* Search + tag row */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">{t('transactions.searchPlaceholder')}</label>
+            <div className="relative">
+              <input
+                type="text"
+                className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm pr-8 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
+                placeholder={isOnline ? t('transactions.searchPlaceholderShort') : t('transactions.searchOffline')}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                disabled={!isOnline}
+                title={!isOnline ? t('transactions.searchOffline') : undefined}
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={() => setSearchInput('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg leading-none"
+                  aria-label="Clear search"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">{t('transactions.filterTag')}</label>
+            <select
+              className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm"
+              value={filters.tag ?? ''}
+              onChange={(e) => setFilters((f) => ({ ...f, tag: e.target.value || undefined, page: 1 }))}
+            >
+              <option value="">{t('transactions.allTags')}</option>
+              {allTags.map((tag) => (
+                <option key={tag} value={tag}>#{tag}</option>
+              ))}
+            </select>
           </div>
         </div>
       </div>

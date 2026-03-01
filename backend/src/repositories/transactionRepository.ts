@@ -60,6 +60,14 @@ class TransactionRepository {
     if (filters.startDate) query = query.where('date', '>=', filters.startDate);
     if (filters.endDate) query = query.where('date', '<=', filters.endDate);
     if (filters.isTransfer !== undefined) query = query.where('is_transfer', filters.isTransfer);
+    if (filters.tag) {
+      query = query.whereIn(
+        'id',
+        this.db('transaction_tags')
+          .select('transaction_id')
+          .where({ user_id: userId, tag: filters.tag })
+      );
+    }
     if (filters.allowedIds && filters.allowedIds.length > 0) {
       query = query.whereIn('id', filters.allowedIds);
     }

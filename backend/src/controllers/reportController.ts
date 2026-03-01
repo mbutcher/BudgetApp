@@ -6,7 +6,7 @@ import { getDatabase } from '@config/database';
 import { forecastService } from '@services/core/forecastService';
 import { netWorthSnapshotRepository } from '@repositories/netWorthSnapshotRepository';
 import { encryptionService } from '@services/encryption/encryptionService';
-import type { SpendingByCategoryItem, TopPayeeItem } from '@typings/core.types';
+import type { SpendingByCategoryItem, TopPayeeItem, TagSummaryItem } from '@typings/core.types';
 
 interface PayeeRow {
   payee: string;
@@ -66,6 +66,9 @@ class ReportController {
     }
     if (!end || !ISO_DATE_RE.test(end)) {
       throw new AppError('end query param is required (YYYY-MM-DD)', 400);
+    }
+    if (start > end) {
+      throw new AppError('start must be on or before end', 400);
     }
     if (type !== 'expense' && type !== 'income') {
       throw new AppError('type must be expense or income', 400);
@@ -136,6 +139,9 @@ class ReportController {
     if (!end || !ISO_DATE_RE.test(end)) {
       throw new AppError('end query param is required (YYYY-MM-DD)', 400);
     }
+    if (start > end) {
+      throw new AppError('start must be on or before end', 400);
+    }
     if (type !== 'expense' && type !== 'income') {
       throw new AppError('type must be expense or income', 400);
     }
@@ -171,6 +177,57 @@ class ReportController {
       }));
 
     res.json({ status: 'success', data: { start, end, type, total: grandTotal, payees } });
+  });
+
+  tagSummary = asyncHandler(async (req: Request, res: Response) => {
+    const { start, end, type = 'expense' } = req.query as Record<string, string>;
+
+    if (!start || !ISO_DATE_RE.test(start)) {
+      throw new AppError('start query param is required (YYYY-MM-DD)', 400);
+    }
+    if (!end || !ISO_DATE_RE.test(end)) {
+      throw new AppError('end query param is required (YYYY-MM-DD)', 400);
+    }
+    if (start > end) {
+      throw new AppError('start must be on or before end', 400);
+    }
+    if (type !== 'expense' && type !== 'income') {
+      throw new AppError('type must be expense or income', 400);
+    }
+
+    const db = getDatabase();
+    const amountFilter = type === 'income' ? db.raw('t.amount > 0') : db.raw('t.amount < 0');
+
+    interface TagRow {
+      tag: string;
+      total_amount: string | number;
+      tx_count: string | number;
+    }
+
+    const rows = (await db('transaction_tags as tt')
+      .join('transactions as t', 't.id', 'tt.transaction_id')
+      .where('t.user_id', req.user!.id)
+      .where('t.is_transfer', false)
+      .where('t.date', '>=', start)
+      .where('t.date', '<=', end)
+      .whereRaw(amountFilter)
+      .groupBy('tt.tag')
+      .select('tt.tag')
+      .sum({ total_amount: db.raw('ABS(t.amount)') })
+      .count({ tx_count: 't.id' })
+      .orderBy('total_amount', 'desc')) as TagRow[];
+
+    const grandTotal = rows.reduce((sum, r) => sum + Number(r.total_amount), 0);
+
+    const tags: TagSummaryItem[] = rows.map((r) => ({
+      tag: r.tag,
+      totalAmount: Number(r.total_amount),
+      percentage:
+        grandTotal > 0 ? Math.round((Number(r.total_amount) / grandTotal) * 1000) / 10 : 0,
+      count: Number(r.tx_count),
+    }));
+
+    res.json({ status: 'success', data: { start, end, type, total: grandTotal, tags } });
   });
 }
 

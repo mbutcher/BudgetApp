@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { transactionApi } from '../api/transactionApi';
+import { transactionApi, TAGS_QUERY_KEY } from '../api/transactionApi';
 import { useAuthStore } from '@features/auth/stores/authStore';
 import { db } from '@lib/db';
 import {
@@ -194,5 +194,16 @@ export function useUnlinkTransaction() {
   return useMutation({
     mutationFn: (id: string) => transactionApi.unlink(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: TRANSACTIONS_KEY }),
+  });
+}
+
+export function useAllTags() {
+  return useQuery({
+    queryKey: TAGS_QUERY_KEY,
+    queryFn: async () => {
+      const res = await transactionApi.listTags();
+      return res.data.data.tags;
+    },
+    staleTime: 5 * 60 * 1000,
   });
 }

@@ -140,8 +140,9 @@ Each widget story mocks its custom hooks (no real API calls) and covers loaded, 
 
 ---
 
-## Phase 4 — Top Payees Report
+## Phase 4 — Top Payees Report ✓
 
+**Status:** Complete
 **Priority:** Medium
 **Scope:** Small
 
