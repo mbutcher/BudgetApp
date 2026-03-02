@@ -3,6 +3,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAccounts } from '@features/core/hooks/useAccounts';
 import { useSavingsGoals, useSavingsGoalProgress } from '@features/core/hooks/useSavingsGoals';
+import { useDashboardHints } from '../hooks/useDashboardConfig';
+import { RolloverReviewDialog } from '@features/core/components/RolloverReviewDialog';
+import { AnnualBudgetReviewDialog } from '@features/core/components/AnnualBudgetReviewDialog';
 
 interface Warning {
   id: string;
@@ -69,54 +72,112 @@ export function WarningsWidget({ excludedAccountIds }: Props) {
   const { t } = useTranslation();
   const warnings = useAccountWarnings(excludedAccountIds);
   const { data: goals = [] } = useSavingsGoals();
+  const { data: hints = [] } = useDashboardHints();
   const goalsWithDeadlines = goals.filter((g) => g.targetDate);
   const [collapsed, setCollapsed] = useState(false);
   const [activeGoalWarnings, setActiveGoalWarnings] = useState<Set<string>>(new Set());
+  const [rolloverPeriod, setRolloverPeriod] = useState<{ start: string; end: string } | null>(
+    null,
+  );
+  const [annualReviewOpen, setAnnualReviewOpen] = useState(false);
+
+  const rolloverHint = hints.find((h) => h.id === 'unreviewed-rollover');
+  const annualReviewHint = hints.find((h) => h.id === 'annual-budget-review');
 
   const handleGoalActiveChange = useCallback((id: string, active: boolean) => {
     setActiveGoalWarnings((prev) => {
       if (prev.has(id) === active) return prev;
       const next = new Set(prev);
-      if (active) next.add(id); else next.delete(id);
+      if (active) next.add(id);
+      else next.delete(id);
       return next;
     });
   }, []);
 
-  const hasContent = warnings.length > 0 || activeGoalWarnings.size > 0;
-
-  if (!hasContent) return null;
+  const hasContent =
+    warnings.length > 0 ||
+    activeGoalWarnings.size > 0 ||
+    !!rolloverHint ||
+    !!annualReviewHint;
 
   return (
-    <div className="mb-4 bg-warning/10 border border-warning/30 rounded-xl overflow-hidden">
-      <button
-        onClick={() => setCollapsed((c) => !c)}
-        className="w-full flex items-center justify-between px-5 py-3 text-warning font-medium text-sm hover:bg-warning/10 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4" />
-          <span>{t('dashboard.warningsTitle')}</span>
-        </div>
-        {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-      </button>
-      {!collapsed && (
-        <div className="px-5 pb-3 space-y-2">
-          {warnings.map((w) => (
-            <div key={w.id} className="flex items-center gap-2 text-warning text-sm">
-              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-              <span>{w.message}</span>
+    <>
+      {hasContent && (
+        <div className="mb-4 bg-warning/10 border border-warning/30 rounded-xl overflow-hidden">
+          <button
+            onClick={() => setCollapsed((c) => !c)}
+            className="w-full flex items-center justify-between px-5 py-3 text-warning font-medium text-sm hover:bg-warning/10 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              <span>{t('dashboard.warningsTitle')}</span>
             </div>
-          ))}
-          {goalsWithDeadlines.map((g) => (
-            <GoalDeadlineWarning
-              key={g.id}
-              goalId={g.id}
-              goalName={g.name}
-              targetDate={g.targetDate!}
-              onActiveChange={handleGoalActiveChange}
-            />
-          ))}
+            {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+          </button>
+          {!collapsed && (
+            <div className="px-5 pb-3 space-y-2">
+              {warnings.map((w) => (
+                <div key={w.id} className="flex items-center gap-2 text-warning text-sm">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                  <span>{w.message}</span>
+                </div>
+              ))}
+              {goalsWithDeadlines.map((g) => (
+                <GoalDeadlineWarning
+                  key={g.id}
+                  goalId={g.id}
+                  goalName={g.name}
+                  targetDate={g.targetDate!}
+                  onActiveChange={handleGoalActiveChange}
+                />
+              ))}
+              {rolloverHint && (
+                <div className="flex items-center justify-between gap-2 text-warning text-sm">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                    <span>{t('dashboard.warningRolloverPending')}</span>
+                  </div>
+                  <button
+                    onClick={() =>
+                      setRolloverPeriod({
+                        start: rolloverHint.meta?.['previousStart'] ?? '',
+                        end: rolloverHint.meta?.['previousEnd'] ?? '',
+                      })
+                    }
+                    className="text-xs text-primary hover:underline whitespace-nowrap"
+                  >
+                    {t('dashboard.reviewRollover')}
+                  </button>
+                </div>
+              )}
+              {annualReviewHint && (
+                <div className="flex items-center justify-between gap-2 text-warning text-sm">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                    <span>{t('dashboard.warningAnnualReviewDue')}</span>
+                  </div>
+                  <button
+                    onClick={() => setAnnualReviewOpen(true)}
+                    className="text-xs text-primary hover:underline whitespace-nowrap"
+                  >
+                    {t('dashboard.reviewBudget')}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
-    </div>
+
+      {rolloverPeriod && (
+        <RolloverReviewDialog
+          open
+          previousStart={rolloverPeriod.start}
+          previousEnd={rolloverPeriod.end}
+          onClose={() => setRolloverPeriod(null)}
+        />
+      )}
+      <AnnualBudgetReviewDialog open={annualReviewOpen} onClose={() => setAnnualReviewOpen(false)} />
+    </>
   );
 }

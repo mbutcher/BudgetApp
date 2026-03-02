@@ -64,6 +64,30 @@ components:
         frequency:         { type: string }
         categoryId:        { type: string, format: uuid }
 
+    RolloverLine:
+      type: object
+      properties:
+        budgetLineId:    { type: string, format: uuid }
+        name:            { type: string }
+        categoryId:      { type: string, format: uuid }
+        proratedAmount:  { type: number, description: Budget line amount normalized to the period }
+        actualAmount:    { type: number, description: Sum of matching transactions in the period }
+        variance:        { type: number, description: "proratedAmount minus actualAmount. Positive = underspent; negative = overspent." }
+
+    RolloverSummary:
+      type: object
+      properties:
+        previousPeriod:
+          type: object
+          properties:
+            start: { type: string, format: date }
+            end:   { type: string, format: date }
+        flexibleLines:
+          type: array
+          items: { $ref: '#/components/schemas/RolloverLine' }
+        totalProratedFlexible: { type: number }
+        totalActualFlexible:   { type: number }
+
     UpcomingExpensesResponse:
       type: object
       properties:
@@ -105,6 +129,42 @@ paths:
                     type: object
                     properties:
                       view: { $ref: '#/components/schemas/BudgetView' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+        '422': { description: Missing or invalid date parameters }
+
+  /budget-view/rollover:
+    get:
+      summary: Get rollover summary for a completed pay period
+      description: |
+        Returns variance data for flexible expense budget lines over a completed pay period.
+        Used to review surplus/deficit carry-forward before acknowledging the period.
+        Only flexible expense lines are included.
+      tags: [Budgets]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: start
+          in: query
+          required: true
+          schema: { type: string, format: date }
+          description: Start date of the completed pay period (inclusive)
+        - name: end
+          in: query
+          required: true
+          schema: { type: string, format: date }
+          description: End date of the completed pay period (inclusive)
+      responses:
+        '200':
+          description: Rollover summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [success] }
+                  data:
+                    type: object
+                    properties:
+                      rollover: { $ref: '#/components/schemas/RolloverSummary' }
         '401': { $ref: '#/components/responses/UnauthorizedError' }
         '422': { description: Missing or invalid date parameters }
 

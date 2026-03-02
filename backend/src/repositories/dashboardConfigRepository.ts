@@ -18,6 +18,9 @@ const DEFAULT_WIDGET_VISIBILITY: Record<WidgetId, boolean> = {
   'savings-goals': true,
   'recent-transactions': true,
   hints: true,
+  'spending-by-category': false,
+  'debt-payoff': false,
+  'tag-summary': false,
 };
 
 /**
@@ -87,6 +90,8 @@ export function buildDefaultConfig(userId: string): DashboardConfig {
     excludedAccountIds: [],
     layouts: buildDefaultLayouts(),
     updatedAt: new Date(),
+    acknowledgedRollovers: {},
+    budgetLinesLastReviewedAt: null,
   };
 }
 
@@ -99,6 +104,12 @@ function mapRow(row: Record<string, unknown>): DashboardConfig {
     excludedAccountIds: JSON.parse(String(row['excluded_account_ids'])) as string[],
     layouts: JSON.parse(String(row['layouts'])) as DashboardLayouts,
     updatedAt: new Date(String(row['updated_at'])),
+    acknowledgedRollovers: row['acknowledged_rollovers']
+      ? (JSON.parse(String(row['acknowledged_rollovers'])) as Record<string, string>)
+      : {},
+    budgetLinesLastReviewedAt: row['budget_lines_last_reviewed_at']
+      ? new Date(String(row['budget_lines_last_reviewed_at']))
+      : null,
   };
 }
 
@@ -117,12 +128,15 @@ class DashboardConfigRepository {
   async upsert(config: DashboardConfig): Promise<DashboardConfig> {
     const db = getDatabase();
     const now = new Date();
+    const acknowledgedRollovers = JSON.stringify(config.acknowledgedRollovers ?? {});
     await db('user_dashboard_config')
       .insert({
         user_id: config.userId,
         widget_visibility: JSON.stringify(config.widgetVisibility),
         excluded_account_ids: JSON.stringify(config.excludedAccountIds),
         layouts: JSON.stringify(config.layouts),
+        acknowledged_rollovers: acknowledgedRollovers,
+        budget_lines_last_reviewed_at: config.budgetLinesLastReviewedAt ?? null,
         updated_at: now,
       })
       .onConflict('user_id')
@@ -130,9 +144,33 @@ class DashboardConfigRepository {
         widget_visibility: JSON.stringify(config.widgetVisibility),
         excluded_account_ids: JSON.stringify(config.excludedAccountIds),
         layouts: JSON.stringify(config.layouts),
+        acknowledged_rollovers: acknowledgedRollovers,
+        budget_lines_last_reviewed_at: config.budgetLinesLastReviewedAt ?? null,
         updated_at: now,
       });
     return { ...config, updatedAt: now };
+  }
+
+  /**
+   * Patch only the rollover-config fields on an existing row without touching
+   * widget_visibility, layouts, or excluded_account_ids.
+   */
+  async patchRolloverConfig(
+    userId: string,
+    patch: {
+      acknowledgedRollovers?: Record<string, string>;
+      budgetLinesLastReviewedAt?: Date | null;
+    }
+  ): Promise<void> {
+    const db = getDatabase();
+    const updates: Record<string, unknown> = { updated_at: new Date() };
+    if (patch.acknowledgedRollovers !== undefined) {
+      updates['acknowledged_rollovers'] = JSON.stringify(patch.acknowledgedRollovers);
+    }
+    if (patch.budgetLinesLastReviewedAt !== undefined) {
+      updates['budget_lines_last_reviewed_at'] = patch.budgetLinesLastReviewedAt;
+    }
+    await db('user_dashboard_config').where({ user_id: userId }).update(updates);
   }
 }
 

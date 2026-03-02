@@ -1,3 +1,9 @@
+export interface PushPreferences {
+  upcomingBills: boolean;
+  simplefinErrors: boolean;
+  goalDeadlines: boolean;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -12,6 +18,8 @@ export interface User {
   timezone: string;
   weekStart: 'sunday' | 'monday' | 'saturday';
   theme: 'default' | 'slate' | 'forest' | 'warm' | 'midnight';
+  pushEnabled: boolean;
+  pushPreferences: PushPreferences | null;
   createdAt: string;
 }
 
@@ -24,6 +32,8 @@ export interface UpdateProfileInput {
   timezone?: string;
   weekStart?: 'sunday' | 'monday' | 'saturday';
   theme?: 'default' | 'slate' | 'forest' | 'warm' | 'midnight';
+  pushEnabled?: boolean;
+  pushPreferences?: PushPreferences;
 }
 
 export interface ChangePasswordInput {
@@ -90,4 +100,10 @@ export interface ApiKey {
 export interface CreateApiKeyResult {
   apiKey: ApiKey;
   rawKey: string;
+}
+
+export interface PushSubscriptionRecord {
+  id: string;
+  deviceName: string | null;
+  createdAt: string;
 }

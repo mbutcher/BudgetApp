@@ -49,3 +49,64 @@ self.addEventListener('sync', (rawEvent) => {
     );
   }
 });
+
+// Push notifications — show a notification when a push message is received
+self.addEventListener('push', (event: PushEvent) => {
+  if (!event.data) return;
+
+  interface PushPayload {
+    title: string;
+    body: string;
+    url?: string;
+  }
+
+  let payload: PushPayload;
+  try {
+    payload = event.data.json() as PushPayload;
+  } catch {
+    payload = { title: 'BudgetApp', body: event.data.text() };
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-96x96.png',
+      data: { url: payload.url ?? '/' },
+    })
+  );
+});
+
+// Notification click — focus or open the app at the target URL
+self.addEventListener('notificationclick', (event: NotificationEvent) => {
+  event.notification.close();
+  const rawUrl: unknown = (event.notification.data as { url?: unknown }).url;
+
+  // Only navigate to same-origin paths to prevent open redirect / XSS via a
+  // compromised push payload. Accept absolute same-origin URLs or relative paths.
+  let targetUrl = '/';
+  if (typeof rawUrl === 'string') {
+    try {
+      const parsed = new URL(rawUrl, self.location.origin);
+      if (parsed.origin === self.location.origin) {
+        targetUrl = parsed.pathname + parsed.search + parsed.hash;
+      }
+    } catch {
+      // rawUrl is a relative path — use as-is if it starts with /
+      if (rawUrl.startsWith('/')) targetUrl = rawUrl;
+    }
+  }
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clients) => {
+        const existing = clients.find((c) => c.url.includes(self.location.origin));
+        if (existing) {
+          void existing.navigate(targetUrl);
+          return existing.focus();
+        }
+        return self.clients.openWindow(targetUrl);
+      })
+  );
+});

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { budgetLineApi } from '../api/budgetLineApi';
 import { useAuthStore } from '@features/auth/stores/authStore';
+import type { RolloverSummary } from '../types';
 import { db } from '@lib/db';
 import {
   isOfflineError,
@@ -138,5 +139,17 @@ export function useDeleteBudgetLine() {
       return budgetLineApi.delete(id);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: BUDGET_LINES_KEY }),
+  });
+}
+
+export function useRolloverSummary(start: string | null, end: string | null) {
+  return useQuery<RolloverSummary>({
+    queryKey: ['budget-view', 'rollover', start, end],
+    queryFn: async () => {
+      const res = await budgetLineApi.getRollover(start!, end!);
+      return res.data.data.rollover;
+    },
+    enabled: Boolean(start && end),
+    staleTime: 5 * 60 * 1000,
   });
 }

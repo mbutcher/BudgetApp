@@ -576,3 +576,22 @@ export interface TagSummaryResponse {
   total: number;
   tags: TagSummaryItem[];
 }
+
+// ─── Rollover ─────────────────────────────────────────────────────────────────
+
+export interface RolloverLine {
+  budgetLineId: string;
+  name: string;
+  categoryId: string;
+  proratedAmount: number;
+  actualAmount: number;
+  /** Positive = underspent (surplus); negative = overspent (deficit). */
+  variance: number;
+}
+
+export interface RolloverSummary {
+  previousPeriod: { start: string; end: string };
+  flexibleLines: RolloverLine[];
+  totalProratedFlexible: number;
+  totalActualFlexible: number;
+}

@@ -84,6 +84,7 @@ import apiRouter from './routes/index';
 import { simplefinScheduler } from './services/integrations/simplefinScheduler';
 import { netWorthScheduler } from './services/netWorthScheduler';
 import { recurringTransactionScheduler } from './services/recurringTransactionScheduler';
+import { notificationScheduler } from './services/notifications/notificationScheduler';
 app.use('/api/v1', apiRouter);
 
 // 404 handler
@@ -102,6 +103,7 @@ async function startServer() {
     simplefinScheduler.start();
     netWorthScheduler.start();
     recurringTransactionScheduler.start();
+    notificationScheduler.start();
 
     // Start server
     const server = app.listen(env.appPort, () => {
@@ -119,6 +121,7 @@ async function startServer() {
       simplefinScheduler.shutdown();
       netWorthScheduler.shutdown();
       recurringTransactionScheduler.shutdown();
+      notificationScheduler.shutdown();
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
       server.close(async () => {
         await closeDatabase();

@@ -14,12 +14,14 @@ import {
   Menu,
   X,
   WifiOff,
+  Plus,
 } from 'lucide-react';
 import { useSimplefinStatus, usePendingReviewCount, useUnmappedAccounts } from '@features/integrations/hooks/useSimplefin';
 import { useNetworkStore } from '@stores/networkStore';
 import { OfflineBanner } from './OfflineBanner';
 import { SyncNotification } from './SyncNotification';
 import { UserAvatarMenu } from './UserAvatarMenu';
+import { QuickAddSheet } from '@features/core/components/QuickAddSheet';
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, key: 'nav.dashboard' },
@@ -122,7 +124,9 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
 }
 
 export function AppLayout() {
+  const { t } = useTranslation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
 
   return (
     <div className="flex h-screen bg-muted/40">
@@ -180,6 +184,17 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Mobile quick-add FAB — hidden on desktop */}
+      <button
+        onClick={() => setQuickAddOpen(true)}
+        className="fixed bottom-6 right-6 z-50 flex items-center justify-center w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors md:hidden"
+        aria-label={t('quickAdd.title')}
+      >
+        <Plus className="h-6 w-6" />
+      </button>
+
+      <QuickAddSheet open={quickAddOpen} onClose={() => setQuickAddOpen(false)} />
 
       <SyncNotification />
     </div>

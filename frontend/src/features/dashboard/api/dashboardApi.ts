@@ -25,3 +25,11 @@ export async function fetchDashboardHints(): Promise<DashboardHint[]> {
   const res = await apiClient.get<HintsResponse>('/dashboard/hints');
   return res.data.data.hints;
 }
+
+export async function acknowledgeRollover(previousStart: string, previousEnd: string): Promise<void> {
+  await apiClient.post('/dashboard/rollover-ack', { previousStart, previousEnd });
+}
+
+export async function markBudgetReviewComplete(): Promise<void> {
+  await apiClient.post('/dashboard/budget-review-complete', {});
+}

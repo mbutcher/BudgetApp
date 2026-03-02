@@ -106,6 +106,13 @@ export const env = {
     origin: e['WEBAUTHN_ORIGIN'] ?? 'http://localhost:3000',
   },
 
+  // Push Notifications (VAPID — optional; push disabled if not configured)
+  push: {
+    vapidPublicKey: e['VAPID_PUBLIC_KEY'] ?? '',
+    vapidPrivateKey: e['VAPID_PRIVATE_KEY'] ?? '',
+    vapidEmail: e['VAPID_EMAIL'] ?? '',
+  },
+
   // Feature Flags
   isDevelopment: e['NODE_ENV'] === 'development',
   isProduction: e['NODE_ENV'] === 'production',

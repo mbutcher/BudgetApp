@@ -18,6 +18,7 @@ import type {
   UpdateProfileData,
   ChangePasswordData,
   ThemeName,
+  PushPreferences,
 } from '@typings/auth.types';
 
 /**
@@ -315,6 +316,8 @@ class AuthService {
       timezone: string;
       weekStart: 'sunday' | 'monday' | 'saturday';
       theme: ThemeName;
+      pushEnabled: boolean;
+      pushPreferences: PushPreferences | null;
       createdAt: Date;
     },
     email: string
@@ -333,6 +336,8 @@ class AuthService {
       timezone: user.timezone,
       weekStart: user.weekStart,
       theme: user.theme,
+      pushEnabled: user.pushEnabled,
+      pushPreferences: user.pushPreferences,
       createdAt: user.createdAt,
     };
   }

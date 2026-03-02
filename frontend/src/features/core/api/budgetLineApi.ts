@@ -6,6 +6,7 @@ import type {
   CreateBudgetLineInput,
   UpdateBudgetLineInput,
   UpcomingExpensesResponse,
+  RolloverSummary,
 } from '../types';
 
 interface ApiResponse<T> {
@@ -38,5 +39,10 @@ export const budgetLineApi = {
   getUpcoming: (start: string, end: string, includeFlexible = false) =>
     apiClient.get<ApiResponse<{ upcoming: UpcomingExpensesResponse }>>(
       `/budget-view/upcoming?start=${start}&end=${end}&includeFlexible=${includeFlexible}`,
+    ),
+
+  getRollover: (start: string, end: string) =>
+    apiClient.get<ApiResponse<{ rollover: RolloverSummary }>>(
+      `/budget-view/rollover?start=${start}&end=${end}`,
     ),
 };

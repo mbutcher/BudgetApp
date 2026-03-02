@@ -1,6 +1,6 @@
 # Database Schema Reference
 
-**Last updated:** 2026-02-26
+**Last updated:** 2026-03-02
 **Database:** MariaDB 11 (InnoDB)
 **Migration tool:** Knex.js
 
@@ -30,9 +30,13 @@ All primary keys are UUIDs generated via `UUID()`. All tables include `created_a
 17. [simplefin_pending_reviews](#simplefin_pending_reviews)
 18. [exchange_rates](#exchange_rates)
 19. [budget_lines](#budget_lines)
+20. [transaction_search_index](#transaction_search_index)
+21. [transaction_tags](#transaction_tags)
+22. [push_subscriptions](#push_subscriptions)
+23. [user_dashboard_config](#user_dashboard_config)
 
 ### IndexedDB Tables (Client-Side, Dexie)
-19. [IndexedDB Schema](#indexeddb-schema)
+24. [IndexedDB Schema](#indexeddb-schema)
 
 ---
 
@@ -64,6 +68,10 @@ Core user accounts. Created in migration `20260217001`.
 | `time_format` | ENUM | No | `'12h'` | `'12h'` \| `'24h'` *(added 20260225001)* |
 | `timezone` | VARCHAR(100) | No | `'America/Toronto'` | IANA timezone identifier *(added 20260225001)* |
 | `week_start` | ENUM | No | `'sunday'` | `'sunday'` \| `'monday'` \| `'saturday'` *(added 20260225001)* |
+| `theme` | ENUM | No | `'default'` | `'default'` \| `'ocean'` \| `'forest'` \| `'sunset'` \| `'rose'` *(added 20260301001)* |
+| `display_name` | VARCHAR(100) | Yes | `NULL` | Optional display name shown in the avatar menu *(added 20260228003)* |
+| `push_enabled` | BOOLEAN | No | `false` | Master switch for push notification delivery *(added 20260301004)* |
+| `push_preferences` | JSON | Yes | `NULL` | Per-notification-type preferences: `{ upcomingBills, goalDeadlines, simplefinErrors }` *(added 20260301004)* |
 | `created_at` | TIMESTAMP | No | `NOW()` | |
 | `updated_at` | TIMESTAMP | No | `NOW()` | Auto-updated |
 
@@ -317,7 +325,7 @@ Principal/interest breakdown for loan payment transactions. Created in migration
 
 ### `savings_goals`
 
-Financial savings targets linked to an account. Created in migration `20260220003`.
+Financial savings targets linked to an account. Created in migration `20260220003`; extended by `20260301005` (Phase 7).
 
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
@@ -327,6 +335,7 @@ Financial savings targets linked to an account. Created in migration `2026022000
 | `name` | VARCHAR(255) | No | — | Goal display name |
 | `target_amount` | DECIMAL(15,2) | No | — | Target balance to reach |
 | `target_date` | DATE | Yes | `NULL` | Optional target completion date (YYYY-MM-DD) |
+| `budget_line_id` | UUID | Yes | `NULL` | FK → `budget_lines.id` ON DELETE SET NULL; when set, the linked budget line's scheduled contributions drive `projectedDate` in progress queries *(added 20260301005)* |
 | `created_at` | TIMESTAMP | No | `NOW()` | |
 | `updated_at` | TIMESTAMP | No | `NOW()` | Auto-updated |
 
@@ -429,9 +438,12 @@ Forward-looking planned income and expense items with embedded recurrence schedu
 | `category_id` | UUID | No | — | FK → `categories.id` ON DELETE RESTRICT; must be a top-level Category (`parent_id IS NULL`) |
 | `subcategory_id` | UUID | Yes | `NULL` | FK → `categories.id` ON DELETE SET NULL; must be a direct child of `category_id` |
 | `amount` | DECIMAL(15,2) | No | — | Amount per single occurrence (always positive) |
-| `frequency` | ENUM | No | `'monthly'` | `'weekly'` \| `'biweekly'` \| `'semi_monthly'` \| `'monthly'` \| `'every_n_days'` \| `'annually'` \| `'one_time'` |
+| `frequency` | ENUM | No | `'monthly'` | `'weekly'` \| `'biweekly'` \| `'semi_monthly'` \| `'twice_monthly'` \| `'monthly'` \| `'every_n_days'` \| `'annually'` \| `'one_time'` |
 | `frequency_interval` | INT | Yes | `NULL` | Number of days between occurrences; only used when `frequency = 'every_n_days'` |
+| `day_of_month_1` | TINYINT | Yes | `NULL` | First day-of-month for `twice_monthly` frequency (1–28) |
+| `day_of_month_2` | TINYINT | Yes | `NULL` | Second day-of-month for `twice_monthly` frequency (1–28; must be > `day_of_month_1`) |
 | `anchor_date` | DATE | No | — | First/next known occurrence date; establishes the recurrence cycle (YYYY-MM-DD) |
+| `account_id` | UUID | Yes | `NULL` | FK → `accounts.id` ON DELETE SET NULL; optional account association for budget vs actuals matching |
 | `is_pay_period_anchor` | BOOLEAN | No | `false` | At most one income Budget Line per user may have this set; drives "This Pay Period" view |
 | `is_active` | BOOLEAN | No | `true` | Soft-delete flag |
 | `notes` | VARCHAR(255) | Yes | `NULL` | Optional notes |
@@ -457,6 +469,92 @@ toAnnual multipliers:
 
 ---
 
+### `transaction_search_index`
+
+HMAC-SHA256 search tokens derived from encrypted transaction fields. Used by the fuzzy payee/description search feature without decrypting raw data. Created in migration `20260220009`.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| `id` | UUID | No | `UUID()` | Primary key |
+| `transaction_id` | UUID | No | — | FK → `transactions.id` ON DELETE CASCADE |
+| `user_id` | UUID | No | — | FK → `users.id` ON DELETE CASCADE |
+| `token` | VARCHAR(64) | No | — | HMAC-SHA256 of a normalized search token (hex digest) |
+| `created_at` | TIMESTAMP | No | `NOW()` | |
+
+**Indexes:** `transaction_id`, `(user_id, token)`
+
+**Notes:** Tokens are generated from lowercased, whitespace-split words extracted from `payee` and `description` fields. The backfill script (`npm run search:backfill`) re-indexes all existing transactions.
+
+---
+
+### `transaction_tags`
+
+Freeform tags attached to individual transactions. Supports multi-tag filtering and the Tag Summary report. Created in migration `20260301002` (Phase 5).
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| `id` | UUID | No | `UUID()` | Primary key |
+| `transaction_id` | UUID | No | — | FK → `transactions.id` ON DELETE CASCADE |
+| `user_id` | UUID | No | — | FK → `users.id` ON DELETE CASCADE |
+| `tag` | VARCHAR(100) | No | — | Tag string (e.g. `"vacation"`, `"tax-deductible"`) |
+| `created_at` | TIMESTAMP | No | `NOW()` | |
+
+**Indexes:** `(transaction_id, tag)` UNIQUE, `(user_id, tag)`
+
+**Notes:**
+- Tags are set as a complete replacement via `transactionTagRepository.setTags()` (delete + re-insert)
+- `GET /transactions/tags` returns all distinct tags for the user (autocomplete)
+- `GET /reports/tag-summary` aggregates spending by tag for the current month
+
+---
+
+### `push_subscriptions`
+
+Web Push API subscriptions registered by authenticated users. One row per browser/device. Created in migration `20260301004` (Phase 8).
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| `id` | UUID | No | `UUID()` | Primary key |
+| `user_id` | UUID | No | — | FK → `users.id` ON DELETE CASCADE |
+| `endpoint` | TEXT | No | — | Push service endpoint URL (provided by the browser's PushManager) |
+| `p256dh` | TEXT | No | — | ECDH public key for payload encryption |
+| `auth` | TEXT | No | — | Auth secret for payload encryption |
+| `device_name` | VARCHAR(255) | Yes | `NULL` | Optional user-agent snippet used to identify the device in Settings UI |
+| `created_at` | TIMESTAMP | No | `NOW()` | |
+
+**Indexes:** `user_id`
+
+**Notes:**
+- Subscriptions are deduplicated on `endpoint` + `user_id` at subscribe time
+- Push is optional — `isPushEnabled()` checks that `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_CONTACT_EMAIL` are all configured; all handlers no-op silently when unconfigured
+- Master switch: `users.push_enabled`; per-type preferences: `users.push_preferences` JSON
+
+---
+
+### `user_dashboard_config`
+
+Per-user dashboard layout and widget visibility settings plus rollover/review state. Created in migration `20260228002`; extended by `20260301003` (Phase 6).
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| `id` | UUID | No | `UUID()` | Primary key |
+| `user_id` | UUID | No | — | FK → `users.id` ON DELETE CASCADE; UNIQUE (one config per user) |
+| `widget_visibility` | JSON | No | — | Map of widget ID → boolean (e.g. `{"warnings":true,"net-worth":false}`) |
+| `excluded_account_ids` | JSON | No | — | Array of account UUIDs excluded from dashboard widgets |
+| `layouts` | JSON | No | — | Responsive grid layouts keyed by breakpoint (`xs`, `sm`, `lg`, `xl`); each value is an array of `{i, x, y, w, h}` items |
+| `acknowledged_rollovers` | JSON | Yes | `NULL` | Map of pay-period key (`YYYY-MM-DD_YYYY-MM-DD`) → ISO acknowledgment timestamp *(added 20260301003)* |
+| `budget_lines_last_reviewed_at` | DATETIME | Yes | `NULL` | UTC timestamp of the last annual budget line review; `NULL` = never reviewed *(added 20260301003)* |
+| `updated_at` | DATETIME | No | `NOW()` | Auto-updated |
+
+**Indexes:** `user_id` UNIQUE
+
+**Notes:**
+- `GET /dashboard/config` returns the saved config or a computed default if no row exists
+- `PUT /dashboard/config` upserts; the `warnings` widget is forced to `visible: true` server-side
+- Rollover acknowledgment via `POST /dashboard/rollover-ack`; annual review stamp via `POST /dashboard/budget-review-complete`
+
+---
+
 ## IndexedDB Schema
 
 Client-side offline storage implemented with Dexie 4. Populated by the sync engine from `GET /api/v1/sync`. Sensitive fields in `pendingMutations` are AES-256-GCM encrypted at queue time using the PRF-derived key.
@@ -471,5 +569,7 @@ Client-side offline storage implemented with Dexie 4. Populated by the sync engi
 | `savingsGoals` | `id` | `id, userId, accountId, name, targetAmount, targetDate` | Mirror of server `savings_goals` |
 | `pendingMutations` | `id` | `id, method, url, body, bodyEncrypted, createdAt` | Offline write queue; `body` is AES-256-GCM encrypted JSON when PRF key is available; `bodyEncrypted: true` flag signals the push engine to decrypt before sending |
 | `syncMeta` | `key` | `key, value` | Key-value store; `lastSyncAt` holds the ISO 8601 timestamp used as cursor for delta syncs |
+| `dashboardConfig` | `userId` | `userId, config, updatedAt` | Cached copy of the user's dashboard layout for offline display *(added Dexie v4)* |
+| `budgetViewCache` | `key` | `key, value, cachedAt` | Key-value cache for server-computed budget view responses; keyed by query params *(added Dexie v5)* |
 
-**Note:** `budget_lines` are not yet in the Dexie schema (offline Budget View support deferred to Phase 10+).
+**Note:** `budget_lines` are not yet in the Dexie sync schema (offline Budget View support deferred to Phase 10+).

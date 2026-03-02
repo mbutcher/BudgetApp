@@ -42,6 +42,18 @@ class BudgetLineController {
     res.json({ status: 'success', data: null });
   });
 
+  getRollover = asyncHandler(async (req: Request, res: Response) => {
+    const { start, end } = req.query;
+    if (typeof start !== 'string' || !ISO_DATE_RE.test(start)) {
+      throw new AppError('start must be a valid ISO date (YYYY-MM-DD)', 400);
+    }
+    if (typeof end !== 'string' || !ISO_DATE_RE.test(end)) {
+      throw new AppError('end must be a valid ISO date (YYYY-MM-DD)', 400);
+    }
+    const summary = await budgetLineService.getRolloverSummary(req.user!.id, start, end);
+    res.json({ status: 'success', data: { rollover: summary } });
+  });
+
   getBudgetView = asyncHandler(async (req: Request, res: Response) => {
     const { start, end } = req.query;
     if (typeof start !== 'string' || !ISO_DATE_RE.test(start)) {

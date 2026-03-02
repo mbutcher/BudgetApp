@@ -21,6 +21,8 @@ export interface User {
   timezone: string;
   weekStart: 'sunday' | 'monday' | 'saturday';
   theme: ThemeName;
+  pushEnabled: boolean;
+  pushPreferences: PushPreferences | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -131,10 +133,18 @@ export interface PublicUser {
   timezone: string;
   weekStart: 'sunday' | 'monday' | 'saturday';
   theme: ThemeName;
+  pushEnabled: boolean;
+  pushPreferences: PushPreferences | null;
   createdAt: Date;
 }
 
 export type ThemeName = 'default' | 'slate' | 'forest' | 'warm' | 'midnight';
+
+export interface PushPreferences {
+  upcomingBills: boolean;
+  simplefinErrors: boolean;
+  goalDeadlines: boolean;
+}
 
 export interface UpdateProfileData {
   displayName?: string | null;
@@ -145,6 +155,8 @@ export interface UpdateProfileData {
   timezone?: string;
   weekStart?: 'sunday' | 'monday' | 'saturday';
   theme?: ThemeName;
+  pushEnabled?: boolean;
+  pushPreferences?: PushPreferences;
 }
 
 export interface ChangePasswordData {

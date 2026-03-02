@@ -42,6 +42,10 @@ export interface DashboardConfig {
   excludedAccountIds: string[];
   layouts: DashboardLayouts;
   updatedAt: string;
+  /** Keys: "YYYY-MM-DD_YYYY-MM-DD". Values: ISO ack timestamp. */
+  acknowledgedRollovers?: Record<string, string>;
+  /** ISO timestamp of last annual budget review. Null = never reviewed. */
+  budgetLinesLastReviewedAt?: string | null;
 }
 
 export interface DashboardHint {
@@ -49,6 +53,8 @@ export interface DashboardHint {
   type: string;
   message: string;
   linkTo?: string;
+  /** Optional extra structured data (e.g. period dates for rollover hint). */
+  meta?: Record<string, string>;
 }
 
 /** Metadata used to populate the Widget Tray. */

@@ -157,8 +157,9 @@ Each widget story mocks its custom hooks (no real API calls) and covers loaded, 
 
 ---
 
-## Phase 5 — Transaction Tagging
+## Phase 5 — Transaction Tagging ✓
 
+**Status:** Complete
 **Priority:** Medium
 **Scope:** Small
 
@@ -179,12 +180,13 @@ Allow freeform tags on transactions for cross-category grouping (e.g., "vacation
 
 ---
 
-## Phase 6 — Budget Period Rollover & Carry-Forward
+## Phase 6 — Budget Period Rollover & Carry-Forward ✓
 
+**Status:** Complete
 **Priority:** Medium
 **Scope:** Medium
 
-When a budget period ends, surface unspent variable amounts and overspent categories for conscious carry-forward decisions rather than silently resetting.
+When a budget period ends, surface unspent variable amounts and overspent categories for conscious carry-forward decisions rather than silently resetting. Also prompts the user to review all budget lines once every 365 days to confirm amounts and frequencies remain accurate.
 
 #### 6.1 Rollover Detection
 
@@ -197,56 +199,113 @@ When a budget period ends, surface unspent variable amounts and overspent catego
 - Rollover review dialog: list over/under lines, let user optionally create a one-time adjustment transaction
 - After review, mark period as acknowledged (stored in `user_dashboard_config`)
 
+#### 6.3 Annual Budget Line Review
+
+Prompt the user once every 365 days (rolling from last review) to confirm all active budget lines are still accurate.
+
+**Storage:** `budgetLinesLastReviewedAt` (ISO timestamp) persisted in `user_dashboard_config` JSON blob alongside existing acknowledged-rollover keys. No new backend table required.
+
+**Warning surface:** `WarningsWidget` emits a "Your budget hasn't been reviewed in over a year — review now" notice when `budgetLinesLastReviewedAt` is `null` or older than 365 days. Driven by `GET /api/v1/dashboard/hints` (same pattern as existing warnings).
+
+**Review dialog:**
+- Lists all active budget lines: name, category, amount, frequency
+- Per-line action: "Looks good ✓" (inline confirm) or "Edit" (navigates to the budget line edit form in a new tab / inline)
+- "Done" button stamps `budgetLinesLastReviewedAt = now()` in dashboard config — only enabled once all lines have been either confirmed or saved
+- Dismissing without completing does not update the timestamp; warning persists
+
+**i18n:** `warnings.annualBudgetReview`, `budget.reviewDialog.*` keys added to all 3 locales
+
 #### Acceptance Criteria
 
 - Rollover summary accurately reflects prior period actuals vs. planned amounts
 - One-time adjustment transaction created by user appears correctly in the new period's actuals
 - Acknowledged rollovers do not re-appear in the warnings widget
+- Annual review warning appears when `budgetLinesLastReviewedAt` is null or > 365 days ago
+- Warning does not appear for a fresh install where no budget lines exist yet
+- Completing the review (all lines confirmed or edited) stamps the timestamp and clears the warning for 365 days
+- Dismissing the dialog without completing does not clear the warning
 
 ---
 
-## Phase 7 — Savings Goal ↔ Budget Line Link
+## Phase 7 — Savings Goal ↔ Budget Line Link ✓
 
+**Status:** Complete
 **Priority:** Low
 **Scope:** Small
 
-- Add `recurring_contribution_budget_line_id` FK on `savings_goals`
-- Budget Line contributions automatically tracked against goal progress
-- `savings_goals` table exists; FK can be added non-breakingly
-- Progress bar on SavingsGoalPage reflects scheduled contributions in addition to current balance
+Link a savings goal to an existing budget line so that the line's scheduled contribution amount drives the goal's projected completion date.
+
+#### 7.1 Backend
+
+- Migration `20260227002`: adds `budget_line_id` (CHAR 36, nullable, FK → `budget_lines.id` SET NULL) to `savings_goals`
+- `SavingsGoal` type updated with `budgetLineId: string | null`
+- `savingsGoalRepository`: `rowToGoal()`, `create()`, `update()` all handle `budget_line_id`
+- `savingsGoalService.getProgress()`: when `budgetLineId` is set, converts the line's `amount` + `frequency` to a monthly rate and projects `targetAmount − currentBalance` → months needed → `projectedDate`
+- `createSavingsGoalSchema` / `updateSavingsGoalSchema`: `budgetLineId` Joi field added
+- `GET /savings-goals/{id}/progress`: `projectedDate` is now budget-line driven when linked; falls back to target-date interpolation otherwise
+
+#### 7.2 Frontend
+
+- `SavingsGoal` / `CreateSavingsGoalInput` / `UpdateSavingsGoalInput` frontend types updated with `budgetLineId`
+- `SavingsGoalsPage` form: optional "Linked Budget Line" select; filters to active income lines; shows `$amount / frequency` label
+- `SavingsGoalCard` display: shows linked budget line name when present
+- `SavingsGoalsWidget`: `projectedDate` from `useSavingsGoalProgress()` reflects budget-line-driven projection
+
+#### 7.3 Documentation
+
+- `docs/openapi/paths/savings-goals.yaml`: `budgetLineId` added to `SavingsGoal`, `CreateSavingsGoalRequest`, `UpdateSavingsGoalRequest` schemas; `GET /{id}/progress` description updated
+
+#### Acceptance Criteria
+
+- A savings goal with a linked biweekly $500 budget line shows a projected completion date of ≈ current balance deficit ÷ $1,083/month
+- Unlinking the budget line (set to null) reverts projection to target-date interpolation or null
+- Deleting the budget line automatically nullifies the FK (SET NULL) without deleting the goal
 
 ---
 
-## Phase 8 — Mobile App Companion (PWA Enhancement)
+## Phase 8 — Mobile App Companion (PWA Enhancement) ✓
 
+**Status:** Complete
 **Priority:** Low
 **Scope:** Large
 
 Improve the PWA experience specifically for mobile use cases.
 
-#### 8.1 Quick-Add Transaction
+#### 8.1 Quick-Add Transaction ✓
 
-- Floating action button on mobile (`xs`/`sm` breakpoints) → bottom sheet with minimal transaction form (amount, payee, account, category)
-- Pre-fills date to today; opens full form if more detail needed
-- Queues offline if no connection
+- Floating action button (`md:hidden`) in `AppLayout` — fixed bottom-right, opens `QuickAddSheet` Dialog
+- Minimal form: amount, payee, account (select), category (select), date; expense sign applied automatically
+- Reuses `useCreateTransaction()` which handles offline queueing via Dexie + `queueMutation`
 
-#### 8.2 Push Notifications (optional)
+#### 8.2 Push Notifications ✓
 
-- `PushManager` subscription stored per device session
-- Notification triggers: upcoming bill within 24 h, SimpleFIN sync error, savings goal deadline in 7 days
-- Backend: `POST /api/v1/push/subscribe`, `DELETE /api/v1/push/subscribe/:id`
-- Opt-in per notification type in Account Settings → Preferences
+- **Backend:** `web-push` npm package; VAPID keys + email in `env.push.*`; optional — all handlers no-op when unconfigured
+- **Migration 20260301004:** `push_subscriptions` table; `push_enabled BOOLEAN DEFAULT false` + `push_preferences JSON NULL` columns on `users`
+- **`pushSubscriptionRepository`:** `findByUser`, `findById`, `create`, `delete`, `deleteByUser`, `deleteByEndpoint`
+- **`pushNotificationService`:** `isPushEnabled()` guard, `sendToUser(userId, payload)` (removes expired subs on 410), typed helpers `sendUpcomingBillAlert`, `sendGoalDeadlineAlert`, `sendSimplefinSyncError`
+- **`notificationScheduler`:** daily cron 07:00 — upcoming fixed expenses due tomorrow, savings goal deadlines within 7 days; per-user `PushPreferences` respected
+- **Routes:** `GET /push/vapid-key` (no auth), `POST /push/subscribe`, `DELETE /push/subscribe/:id`, `GET /push/subscriptions`
+- **SimpleFIN scheduler:** fires `sendSimplefinSyncError` on sync failure (fire-and-forget)
+- **`authService` / `userRepository`:** `pushEnabled` + `pushPreferences` read from DB + returned in `PublicUser`; `updatePreferences` persists both fields
+- **Frontend types:** `PushPreferences`, `PushSubscriptionRecord` added to `auth/types`; `User.pushEnabled` + `User.pushPreferences` added; `UpdateProfileInput` extended
+- **`pushApi.ts`:** `getVapidKey`, `subscribe`, `unsubscribe`, `listSubscriptions`
+- **`sw.ts`:** `push` event handler (shows notification via `self.registration.showNotification`); `notificationclick` handler (focuses or opens app at target URL)
+- **`usePushNotifications.ts`:** `usePushSubscriptions`, `usePushSubscribe` (request permission + subscribe), `useUnsubscribePush`, `isPushSupported()`
+- **Notifications card in `AccountSettingsPage`:** master push toggle, per-type preference checkboxes (upcomingBills / simplefinErrors / goalDeadlines), device subscription list with remove button
+- **i18n:** `settings.notifications.*` (16 keys) + `quickAdd.*` (9 keys) added to all 3 locales
+- **OpenAPI:** `docs/openapi/paths/push.yaml` — `PushSubscription` schema + all 4 push endpoints
 
 #### Acceptance Criteria
 
-- Quick-add flow completes in < 5 taps on a phone
-- Push subscription survives browser restart
-- Push notifications respect user opt-in preferences
+- Quick-add flow completes in < 5 taps on a phone ✓
+- Push subscription survives browser restart ✓
+- Push notifications respect user opt-in preferences ✓
 
 ---
 
-## Phase 9 — Production Deployment Guide
+## Phase 9 — Production Deployment Guide ✓
 
+**Status:** Complete
 **Priority:** Low
 **Scope:** Small
 
@@ -254,6 +313,8 @@ Improve the PWA experience specifically for mobile use cases.
 - Docker Compose prod profile validation with HTTPS/TLS via Let's Encrypt or reverse proxy
 - Backup/restore procedure for MariaDB volumes
 - Health check endpoint documentation (`GET /health`)
+
+See `docs/developer/deployment.md` for the full guide covering prerequisites, secret generation, SSL setup (Nginx Proxy Manager + self-signed options), first-run migrations, backup/restore via `mysqldump`, upgrade workflow, and troubleshooting reference.
 
 ---
 
@@ -379,6 +440,8 @@ New middleware: `requireHouseholdRole('owner' | 'member')` — guards owner-only
 | Widget hook mocking in Storybook | Module-level mock via Storybook loaders | Avoids MSW complexity for a single-user app; custom hooks return static fixture data in story context |
 | Tag model | Flat `transaction_tags` join table | Simple; avoids FK complexity of a `tags` master table for freeform user labels |
 | Rollover carry-forward | User-initiated adjustment transactions | Preserves immutable transaction history; no silent balance corrections |
+| Annual budget review trigger | Rolling 365 days from last review | Simpler than calendar-year logic; works regardless of when the user started using the app; stored as a timestamp in existing `user_dashboard_config` JSON — no new schema needed |
+| Annual review completion gate | All lines must be confirmed or edited before timestamp is stamped | Prevents accidental dismissal; ensures the user has consciously evaluated every line rather than just clicking through |
 | Household model | One household per deployment; `household_members` join table; owner creates members directly | Single-household constraint keeps the auth model simple; no invite emails required for a family self-hosted setup |
 | Account sharing | `account_shares` with `access_level ENUM('view','write')` per pair | Configurable per account rather than per user role; owner always retains full control |
 | Category ownership | Household-wide (migrated from per-user) | Shared categories are the natural fit for household budgeting; per-user categories added complexity for no real benefit |

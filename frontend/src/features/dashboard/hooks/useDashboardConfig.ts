@@ -1,10 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchDashboardConfig, putDashboardConfig } from '../api/dashboardApi';
+import {
+  fetchDashboardConfig,
+  putDashboardConfig,
+  fetchDashboardHints,
+  acknowledgeRollover,
+  markBudgetReviewComplete,
+} from '../api/dashboardApi';
 import { buildDefaultConfig } from '../widgetRegistry';
 import { isOfflineError } from '@lib/db/offlineHelpers';
 import { db } from '@lib/db';
 import { useAuthStore } from '@features/auth/stores/authStore';
-import type { DashboardConfig } from '../types/dashboard';
+import type { DashboardConfig, DashboardHint } from '../types/dashboard';
 
 const QUERY_KEY = ['dashboard', 'config'];
 
@@ -47,3 +53,37 @@ export function useSaveDashboardConfig() {
     },
   });
 }
+
+const HINTS_QUERY_KEY = ['dashboard', 'hints'] as const;
+
+export function useDashboardHints() {
+  return useQuery({
+    queryKey: HINTS_QUERY_KEY,
+    queryFn: fetchDashboardHints,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useAcknowledgeRollover() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ previousStart, previousEnd }: { previousStart: string; previousEnd: string }) =>
+      acknowledgeRollover(previousStart, previousEnd),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: HINTS_QUERY_KEY });
+    },
+  });
+}
+
+export function useMarkBudgetReviewComplete() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: markBudgetReviewComplete,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: HINTS_QUERY_KEY });
+    },
+  });
+}
+
+// Re-export DashboardHint so callers don't need to import from types separately
+export type { DashboardHint };

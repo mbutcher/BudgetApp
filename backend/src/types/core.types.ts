@@ -725,7 +725,10 @@ export type WidgetId =
   | 'monthly-chart'
   | 'savings-goals'
   | 'recent-transactions'
-  | 'hints';
+  | 'hints'
+  | 'spending-by-category'
+  | 'debt-payoff'
+  | 'tag-summary';
 
 export interface GridLayoutItem {
   i: WidgetId;
@@ -748,6 +751,10 @@ export interface DashboardConfig {
   excludedAccountIds: string[];
   layouts: DashboardLayouts;
   updatedAt: Date;
+  /** Keys: "YYYY-MM-DD_YYYY-MM-DD" (previousStart_previousEnd). Values: ISO ack timestamp. */
+  acknowledgedRollovers: Record<string, string>;
+  /** ISO timestamp of last annual budget line review. Null = never reviewed. */
+  budgetLinesLastReviewedAt: Date | null;
 }
 
 export interface DashboardHint {
@@ -755,4 +762,56 @@ export interface DashboardHint {
   type: string;
   message: string;
   linkTo?: string;
+  /** Optional extra structured data (e.g. period dates for rollover hint). */
+  meta?: Record<string, string>;
+}
+
+// ─── Rollover Summary ─────────────────────────────────────────────────────────
+
+export interface RolloverLine {
+  budgetLineId: string;
+  name: string;
+  categoryId: string;
+  /** Prorated planned amount for the prior period. */
+  proratedAmount: number;
+  /** Actual amount spent in the prior period. */
+  actualAmount: number;
+  /** proratedAmount − actualAmount. Positive = underspent; negative = overspent. */
+  variance: number;
+}
+
+export interface RolloverSummary {
+  previousPeriod: { start: string; end: string };
+  flexibleLines: RolloverLine[];
+  totalProratedFlexible: number;
+  totalActualFlexible: number;
+}
+
+// ─── Push Notifications ───────────────────────────────────────────────────────
+
+export interface PushSubscription {
+  id: string;
+  userId: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  deviceName: string | null;
+  createdAt: Date;
+}
+
+export interface CreatePushSubscriptionData {
+  userId: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  deviceName: string | null;
+}
+
+export interface NotificationPayload {
+  title: string;
+  body: string;
+  /** Optional badge text or tag for deduplication */
+  tag?: string;
+  /** URL to open when notification is clicked */
+  url?: string;
 }

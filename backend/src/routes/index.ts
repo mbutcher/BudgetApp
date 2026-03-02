@@ -15,6 +15,7 @@ import budgetLineRoutes from './budgetLineRoutes';
 import budgetViewRoutes from './budgetViewRoutes';
 import recurringTransactionRoutes from './recurringTransactionRoutes';
 import dashboardRoutes from './dashboardRoutes';
+import pushRoutes from './pushRoutes';
 
 const router = Router();
 
@@ -37,5 +38,6 @@ router.use('/budget-lines', budgetLineRoutes);
 router.use('/budget-view', budgetViewRoutes);
 router.use('/recurring-transactions', recurringTransactionRoutes);
 router.use('/dashboard', dashboardRoutes);
+router.use('/push', pushRoutes);
 
 export default router;

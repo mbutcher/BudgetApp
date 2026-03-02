@@ -10,6 +10,7 @@ components:
         name:         { type: string }
         targetAmount: { type: number, minimum: 0 }
         targetDate:   { type: ['string', 'null'], format: date }
+        budgetLineId: { type: ['string', 'null'], format: uuid, description: "Optional linked budget line. Its scheduled contribution amount drives the projected completion date." }
         createdAt:    { type: string, format: date-time }
         updatedAt:    { type: string, format: date-time }
 
@@ -32,6 +33,7 @@ components:
         name:         { type: string, maxLength: 255 }
         targetAmount: { type: number, minimum: 0 }
         targetDate:   { type: string, format: date }
+        budgetLineId: { type: ['string', 'null'], format: uuid }
 
     UpdateSavingsGoalRequest:
       type: object
@@ -39,6 +41,7 @@ components:
         name:         { type: string, maxLength: 255 }
         targetAmount: { type: number, minimum: 0 }
         targetDate:   { type: ['string', 'null'], format: date }
+        budgetLineId: { type: ['string', 'null'], format: uuid }
 
 paths:
   /savings-goals:
@@ -169,7 +172,7 @@ paths:
   /savings-goals/{id}/progress:
     get:
       summary: Get savings goal progress
-      description: Returns current balance vs target, percent complete, and projected completion date.
+      description: Returns current balance vs target, percent complete, and projected completion date. If a budget line is linked, the projected date is computed from the line's scheduled monthly contribution rate; otherwise it is derived from the target date.
       tags: [Analytics]
       security: [{ bearerAuth: [] }]
       parameters:

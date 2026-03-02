@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import { simplefinRepository } from '@repositories/simplefinRepository';
 import { simplefinService } from './simplefinService';
 import logger from '@utils/logger';
+import { sendSimplefinSyncError } from '@services/notifications/pushNotificationService';
 
 class SimplefinScheduler {
   private job: cron.ScheduledTask | null = null;
@@ -43,6 +44,12 @@ class SimplefinScheduler {
       logger.info('SimpleFIN scheduler: triggering sync', { userId: conn.userId });
       void simplefinService.sync(conn.userId).catch((err: unknown) => {
         logger.error('SimpleFIN scheduler: sync failed', { userId: conn.userId, err });
+        void sendSimplefinSyncError(conn.userId, String(err)).catch((notifErr: unknown) => {
+          logger.warn('SimpleFIN sync error notification failed', {
+            userId: conn.userId,
+            notifErr,
+          });
+        });
       });
     }
   }

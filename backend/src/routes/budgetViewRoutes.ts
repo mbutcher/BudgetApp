@@ -16,6 +16,14 @@ router.get(
   budgetLineController.getBudgetView
 );
 
+// GET /budget-view/rollover?start=YYYY-MM-DD&end=YYYY-MM-DD
+// Returns flexible expense variance summary for a completed pay period.
+router.get(
+  '/rollover',
+  validateRequest(budgetViewQuerySchema, 'query'),
+  budgetLineController.getRollover
+);
+
 // GET /budget-view/pay-period — current pay period derived from anchor income line
 router.get('/pay-period', budgetLineController.getPayPeriod);
 

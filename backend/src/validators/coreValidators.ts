@@ -93,7 +93,7 @@ export const createTransactionSchema = Joi.object({
     'string.pattern.base': 'Date must be in YYYY-MM-DD format',
   }),
   categoryId: Joi.string().uuid().optional().allow(null),
-  tags: Joi.array().items(Joi.string().trim().lowercase().max(50)).max(20).optional(),
+  tags: Joi.array().items(Joi.string().trim().lowercase().min(1).max(50)).max(20).optional(),
 });
 
 export const updateTransactionSchema = Joi.object({
@@ -105,7 +105,7 @@ export const updateTransactionSchema = Joi.object({
   date: Joi.string().pattern(ISO_DATE),
   categoryId: Joi.string().uuid().allow(null),
   isCleared: Joi.boolean(),
-  tags: Joi.array().items(Joi.string().trim().lowercase().max(50)).max(20),
+  tags: Joi.array().items(Joi.string().trim().lowercase().min(1).max(50)).max(20),
 }).min(1);
 
 export const transactionFiltersSchema = Joi.object({
@@ -172,12 +172,14 @@ export const createSavingsGoalSchema = Joi.object({
     'number.positive': 'targetAmount must be a positive number',
   }),
   targetDate: Joi.string().pattern(ISO_DATE).optional().allow(null),
+  budgetLineId: Joi.string().uuid().optional().allow(null),
 });
 
 export const updateSavingsGoalSchema = Joi.object({
   name: Joi.string().max(255),
   targetAmount: Joi.number().positive().precision(2),
   targetDate: Joi.string().pattern(ISO_DATE).allow(null),
+  budgetLineId: Joi.string().uuid().optional().allow(null),
 }).min(1);
 
 // ─── Budget Validators ────────────────────────────────────────────────────────
@@ -544,4 +546,21 @@ export const changePasswordSchema = Joi.object({
   confirmNewPassword: Joi.valid(Joi.ref('newPassword')).required().messages({
     'any.only': 'Passwords do not match',
   }),
+});
+
+// ─── Push Notification Validators ─────────────────────────────────────────────
+
+export const subscribePushSchema = Joi.object({
+  endpoint: Joi.string().uri().max(2048).required().messages({
+    'any.required': 'endpoint is required',
+    'string.uri': 'endpoint must be a valid URL',
+    'string.max': 'endpoint is too long',
+  }),
+  keys: Joi.object({
+    p256dh: Joi.string().required().messages({ 'any.required': 'keys.p256dh is required' }),
+    auth: Joi.string().required().messages({ 'any.required': 'keys.auth is required' }),
+  })
+    .required()
+    .messages({ 'any.required': 'keys is required' }),
+  deviceName: Joi.string().max(255).optional().allow(null, ''),
 });

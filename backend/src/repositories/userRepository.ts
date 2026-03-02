@@ -24,6 +24,10 @@ function rowToUser(row: Record<string, unknown>): User {
     timezone: (row['timezone'] as string | undefined) ?? 'America/Toronto',
     weekStart: ((row['week_start'] as string | undefined) ?? 'sunday') as User['weekStart'],
     theme: ((row['theme'] as string | undefined) ?? 'default') as User['theme'],
+    pushEnabled: Boolean(row['push_enabled']),
+    pushPreferences: row['push_preferences']
+      ? (JSON.parse(row['push_preferences'] as string) as User['pushPreferences'])
+      : null,
     createdAt: new Date(row['created_at'] as string),
     updatedAt: new Date(row['updated_at'] as string),
   };
@@ -124,6 +128,8 @@ class UserRepository {
     if (data.timezone !== undefined) updates['timezone'] = data.timezone;
     if (data.weekStart !== undefined) updates['week_start'] = data.weekStart;
     if (data.theme !== undefined) updates['theme'] = data.theme;
+    if (data.pushEnabled !== undefined) updates['push_enabled'] = data.pushEnabled;
+    if (data.pushPreferences !== undefined) updates['push_preferences'] = JSON.stringify(data.pushPreferences);
 
     if (Object.keys(updates).length > 0) {
       await this.db('users').where({ id: userId }).update(updates);

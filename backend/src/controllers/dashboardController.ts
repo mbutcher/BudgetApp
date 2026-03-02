@@ -17,6 +17,9 @@ const VALID_WIDGET_IDS = new Set<WidgetId>([
   'savings-goals',
   'recent-transactions',
   'hints',
+  'spending-by-category',
+  'debt-payoff',
+  'tag-summary',
 ]);
 
 const BREAKPOINTS = ['xs', 'sm', 'lg', 'xl'] as const;
@@ -52,6 +55,9 @@ function validateConfig(body: unknown): DashboardConfig | null {
     excludedAccountIds: b['excludedAccountIds'] as string[],
     layouts: b['layouts'] as DashboardLayouts,
     updatedAt: new Date(),
+    // Rollover fields are preserved by putConfig after this call; default here to satisfy type
+    acknowledgedRollovers: {},
+    budgetLinesLastReviewedAt: null,
   };
 }
 
@@ -72,6 +78,10 @@ class DashboardController {
     validated.userId = userId;
     // warnings must always be visible
     validated.widgetVisibility['warnings'] = true;
+    // Preserve rollover config fields — a PUT from an older frontend should not wipe them
+    const existing = await dashboardConfigRepository.findByUserId(userId);
+    validated.acknowledgedRollovers = existing?.acknowledgedRollovers ?? {};
+    validated.budgetLinesLastReviewedAt = existing?.budgetLinesLastReviewedAt ?? null;
     const saved = await dashboardConfigRepository.upsert(validated);
     // Clear hint cache — excluded accounts may have changed
     dashboardHintsService.clearCache(userId);
@@ -82,6 +92,54 @@ class DashboardController {
     const userId = req.user!.id;
     const hints = await dashboardHintsService.getHints(userId);
     res.json({ status: 'success', data: { hints } });
+  });
+
+  /** POST /dashboard/rollover-ack — acknowledge a completed rollover period. */
+  acknowledgeRollover = asyncHandler(async (req: Request, res: Response) => {
+    const { previousStart, previousEnd } = req.body as {
+      previousStart: unknown;
+      previousEnd: unknown;
+    };
+    const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+    if (
+      typeof previousStart !== 'string' ||
+      !ISO_DATE_RE.test(previousStart) ||
+      typeof previousEnd !== 'string' ||
+      !ISO_DATE_RE.test(previousEnd)
+    ) {
+      throw new AppError('previousStart and previousEnd must be valid ISO dates (YYYY-MM-DD)', 400);
+    }
+    const userId = req.user!.id;
+    const existing = await dashboardConfigRepository.findByUserId(userId);
+    const base = existing ?? buildDefaultConfig(userId);
+    const key = `${previousStart}_${previousEnd}`;
+    const updatedRollovers = { ...base.acknowledgedRollovers, [key]: new Date().toISOString() };
+    if (existing) {
+      await dashboardConfigRepository.patchRolloverConfig(userId, {
+        acknowledgedRollovers: updatedRollovers,
+      });
+    } else {
+      await dashboardConfigRepository.upsert({ ...base, acknowledgedRollovers: updatedRollovers });
+    }
+    dashboardHintsService.clearCache(userId);
+    res.json({ status: 'success', data: null });
+  });
+
+  /** POST /dashboard/budget-review-complete — stamp the annual budget review timestamp. */
+  completeBudgetReview = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.id;
+    const now = new Date();
+    const existing = await dashboardConfigRepository.findByUserId(userId);
+    if (existing) {
+      await dashboardConfigRepository.patchRolloverConfig(userId, {
+        budgetLinesLastReviewedAt: now,
+      });
+    } else {
+      const base = buildDefaultConfig(userId);
+      await dashboardConfigRepository.upsert({ ...base, budgetLinesLastReviewedAt: now });
+    }
+    dashboardHintsService.clearCache(userId);
+    res.json({ status: 'success', data: null });
   });
 }
 

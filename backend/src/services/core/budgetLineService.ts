@@ -6,6 +6,8 @@ import type {
   CreateBudgetLineData,
   Occurrence,
   PayPeriod,
+  RolloverLine,
+  RolloverSummary,
   UpdateBudgetLineData,
 } from '@typings/core.types';
 import { categoryRepository } from '@repositories/categoryRepository';
@@ -68,8 +70,9 @@ function proratedAmount(
 /**
  * Given a pay-period anchor Budget Line, compute the start and end of the
  * pay period that contains `referenceDate` (defaults to today).
+ * Exported so dashboardHintsService can compute the previous pay period.
  */
-function computeCurrentPayPeriod(
+export function computeCurrentPayPeriod(
   anchorLine: BudgetLine,
   referenceDate: Date = new Date()
 ): { start: Date; end: Date } {
@@ -428,6 +431,58 @@ class BudgetLineService {
       end: end.toISOString().substring(0, 10),
       budgetLineId: anchor.id,
       frequency: anchor.frequency,
+    };
+  }
+
+  /**
+   * Computes a rollover variance summary for all flexible expense Budget Lines
+   * within the given prior period window. Positive variance = underspent (surplus);
+   * negative variance = overspent (deficit).
+   */
+  async getRolloverSummary(userId: string, start: string, end: string): Promise<RolloverSummary> {
+    const windowStart = new Date(start + 'T00:00:00');
+    const windowEnd = new Date(end + 'T00:00:00');
+
+    if (windowStart > windowEnd) {
+      throw new AppError('start must be on or before end', 400);
+    }
+
+    const lines = await budgetLineRepository.findAllForUser(userId);
+    const flexibleExpenseLines = lines.filter(
+      (l) => l.classification === 'expense' && l.flexibility === 'flexible'
+    );
+
+    const categoryIds = flexibleExpenseLines.map((l) => l.subcategoryId ?? l.categoryId);
+    const actuals = await budgetLineRepository.getActuals(userId, categoryIds, start, end);
+    const actualsMap = new Map(actuals.map((a) => [a.categoryId, a.actualAmount]));
+
+    const rolloverLines: RolloverLine[] = flexibleExpenseLines.map((line) => {
+      const anchor = new Date(line.anchorDate + 'T00:00:00');
+      const prorated = proratedAmount(
+        line.amount,
+        line.frequency,
+        line.frequencyInterval,
+        anchor,
+        windowStart,
+        windowEnd
+      );
+      const effectiveCategoryId = line.subcategoryId ?? line.categoryId;
+      const actual = actualsMap.get(effectiveCategoryId) ?? 0;
+      return {
+        budgetLineId: line.id,
+        name: line.name,
+        categoryId: line.categoryId,
+        proratedAmount: prorated,
+        actualAmount: actual,
+        variance: prorated - actual,
+      };
+    });
+
+    return {
+      previousPeriod: { start, end },
+      flexibleLines: rolloverLines,
+      totalProratedFlexible: rolloverLines.reduce((s, l) => s + l.proratedAmount, 0),
+      totalActualFlexible: rolloverLines.reduce((s, l) => s + l.actualAmount, 0),
     };
   }
 }

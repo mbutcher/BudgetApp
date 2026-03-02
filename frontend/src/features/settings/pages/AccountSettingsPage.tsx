@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Globe, Clock, Calendar, MapPin, AlignLeft, User, Palette, Check } from 'lucide-react';
+import { Globe, Clock, Calendar, MapPin, AlignLeft, User, Palette, Check, Bell } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import i18n from '@lib/i18n';
 import { authApi } from '@features/auth/api/authApi';
 import { useAuthStore } from '@features/auth/stores/authStore';
-import type { UpdateProfileInput } from '@features/auth/types';
+import type { UpdateProfileInput, PushPreferences } from '@features/auth/types';
 import { useTheme, type ThemeName } from '../../../app/ThemeProvider';
 import { Button } from '@components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@components/ui/card';
@@ -13,6 +13,12 @@ import { Alert, AlertDescription } from '@components/ui/alert';
 import { Label } from '@components/ui/label';
 import { Input } from '@components/ui/input';
 import { getApiErrorMessage } from '@lib/api/errors';
+import {
+  isPushSupported,
+  usePushSubscriptions,
+  usePushSubscribe,
+  useUnsubscribePush,
+} from '@features/auth/hooks/usePushNotifications';
 
 // ─── Timezone list (grouped by region) ───────────────────────────────────────
 
@@ -372,7 +378,141 @@ export function AccountSettingsPage() {
         >
           {t('common.save')}
         </Button>
+
+        {/* Notifications */}
+        <NotificationsCard />
       </div>
     </div>
+  );
+}
+
+// ─── Notifications card (push) ────────────────────────────────────────────────
+
+function NotificationsCard() {
+  const { t } = useTranslation();
+  const { user, updateUser } = useAuthStore();
+  const pushSupported = isPushSupported();
+  const { data: subscriptions = [] } = usePushSubscriptions();
+  const { permission, subscribe } = usePushSubscribe();
+  const { mutate: unsubscribeSub, isPending: isUnsubbing } = useUnsubscribePush();
+
+  const updateProfile = useMutation({
+    mutationFn: (data: UpdateProfileInput) => authApi.updateProfile(data),
+    onSuccess: (res) => {
+      updateUser(res.data.data.user);
+    },
+  });
+
+  const prefs: PushPreferences = user?.pushPreferences ?? {
+    upcomingBills: true,
+    simplefinErrors: true,
+    goalDeadlines: true,
+  };
+
+  function handleToggleEnabled() {
+    updateProfile.mutate({ pushEnabled: !user?.pushEnabled });
+  }
+
+  function handleTogglePref(key: keyof PushPreferences) {
+    const next = { ...prefs, [key]: !prefs[key] };
+    updateProfile.mutate({ pushPreferences: next });
+  }
+
+  async function handleSubscribe() {
+    await subscribe();
+  }
+
+  if (!pushSupported) {
+    return (
+      <PrefSection
+        icon={Bell}
+        title={t('settings.notifications.title')}
+        description={t('settings.notifications.subtitle')}
+      >
+        <p className="text-sm text-muted-foreground">{t('settings.notifications.notSupported')}</p>
+      </PrefSection>
+    );
+  }
+
+  return (
+    <PrefSection
+      icon={Bell}
+      title={t('settings.notifications.title')}
+      description={t('settings.notifications.subtitle')}
+    >
+      <div className="space-y-4">
+        {/* Master toggle */}
+        <label className="flex items-center justify-between gap-4 cursor-pointer">
+          <div>
+            <p className="text-sm font-medium text-foreground">{t('settings.notifications.enablePush')}</p>
+            <p className="text-xs text-muted-foreground">{t('settings.notifications.enablePushDesc')}</p>
+          </div>
+          <input
+            type="checkbox"
+            checked={user?.pushEnabled ?? false}
+            onChange={handleToggleEnabled}
+            className="h-4 w-4 accent-primary"
+          />
+        </label>
+
+        {user?.pushEnabled && (
+          <>
+            {/* Per-type preferences */}
+            <div className="border-t border-border pt-4 space-y-3">
+              {([
+                ['upcomingBills', 'settings.notifications.upcomingBills', 'settings.notifications.upcomingBillsDesc'],
+                ['simplefinErrors', 'settings.notifications.simplefinErrors', 'settings.notifications.simplefinErrorsDesc'],
+                ['goalDeadlines', 'settings.notifications.goalDeadlines', 'settings.notifications.goalDeadlinesDesc'],
+              ] as const).map(([key, labelKey, descKey]) => (
+                <label key={key} className="flex items-center justify-between gap-4 cursor-pointer">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{t(labelKey)}</p>
+                    <p className="text-xs text-muted-foreground">{t(descKey)}</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={prefs[key]}
+                    onChange={() => handleTogglePref(key)}
+                    className="h-4 w-4 accent-primary"
+                  />
+                </label>
+              ))}
+            </div>
+
+            {/* Subscription management */}
+            <div className="border-t border-border pt-4 space-y-3">
+              <p className="text-sm font-medium text-foreground">{t('settings.notifications.thisDevice')}</p>
+              {permission !== 'granted' ? (
+                <Button size="sm" onClick={() => void handleSubscribe()}>
+                  {t('settings.notifications.enableThisDevice')}
+                </Button>
+              ) : subscriptions.length === 0 ? (
+                <Button size="sm" onClick={() => void handleSubscribe()}>
+                  {t('settings.notifications.subscribeThisDevice')}
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  {subscriptions.map((sub) => (
+                    <div key={sub.id} className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {sub.deviceName ?? t('settings.notifications.unknownDevice')}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={isUnsubbing}
+                        onClick={() => unsubscribeSub(sub.id)}
+                      >
+                        {t('settings.notifications.removeDevice')}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </PrefSection>
   );
 }

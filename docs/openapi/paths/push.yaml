@@ -1,0 +1,162 @@
+components:
+  schemas:
+    PushSubscription:
+      type: object
+      required:
+        - id
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        deviceName:
+          type: ['string', 'null']
+          description: Human-readable device/browser label derived from the User-Agent at subscription time.
+        createdAt:
+          type: string
+          format: date-time
+
+paths:
+  /push/vapid-key:
+    get:
+      summary: Get VAPID public key
+      description: >
+        Returns the server's VAPID public key used to create push subscriptions.
+        Returns `null` when push notifications are not configured on this server.
+        No authentication required — the key is needed before the user logs in.
+      tags:
+        - Push Notifications
+      security: []
+      responses:
+        '200':
+          description: VAPID public key (may be null if push is disabled)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      vapidPublicKey:
+                        type: ['string', 'null']
+                        example: BJ4kZKFso...
+
+  /push/subscribe:
+    post:
+      summary: Register a push subscription
+      description: >
+        Registers a Web Push subscription for the authenticated user.
+        Any existing subscription with the same endpoint is replaced to avoid duplicates.
+      tags:
+        - Push Notifications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - endpoint
+                - keys
+              properties:
+                endpoint:
+                  type: string
+                  format: uri
+                  description: Push service endpoint URL from PushSubscription.endpoint.
+                keys:
+                  type: object
+                  required:
+                    - p256dh
+                    - auth
+                  properties:
+                    p256dh:
+                      type: string
+                      description: ECDH public key (base64url).
+                    auth:
+                      type: string
+                      description: Auth secret (base64url).
+                deviceName:
+                  type: string
+                  description: Optional human-readable label for this subscription.
+      responses:
+        '201':
+          description: Subscription registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      subscription:
+                        $ref: '#/components/schemas/PushSubscription'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '503':
+          description: Push notifications are not configured on this server
+
+  /push/subscriptions:
+    get:
+      summary: List push subscriptions
+      description: Returns all push subscriptions registered for the current user.
+      tags:
+        - Push Notifications
+      responses:
+        '200':
+          description: List of subscriptions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      subscriptions:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PushSubscription'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /push/subscribe/{id}:
+    delete:
+      summary: Remove a push subscription
+      description: Removes a specific push subscription. The subscription must belong to the current user.
+      tags:
+        - Push Notifications
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Subscription removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: 'null'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
