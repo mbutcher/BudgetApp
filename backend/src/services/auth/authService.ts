@@ -1,12 +1,13 @@
 import { env } from '@config/env';
 import { logger, loggers } from '@utils/logger';
-import { ConflictError, UnauthorizedError } from '@middleware/errorHandler';
+import { AppError, ConflictError, UnauthorizedError } from '@middleware/errorHandler';
 import { encryptionService } from '@services/encryption/encryptionService';
-import { categoryService } from '@services/core/categoryService';
 import { passwordService } from './passwordService';
 import { tokenService } from './tokenService';
 import { userRepository } from '@repositories/userRepository';
 import { refreshTokenRepository } from '@repositories/refreshTokenRepository';
+import { householdMemberRepository } from '@repositories/householdMemberRepository';
+import { getDatabase } from '@config/database';
 import type {
   RegisterInput,
   LoginInput,
@@ -57,6 +58,12 @@ class AuthService {
    * Throws ConflictError if the email is already registered (without confirming the email exists).
    */
   async register(input: RegisterInput): Promise<PublicUser> {
+    // Registration guard: locked once any household exists
+    const { registrationOpen } = await this.getRegistrationStatus();
+    if (!registrationOpen) {
+      throw new AppError('Registration is closed', 403);
+    }
+
     const normalizedEmail = input.email.toLowerCase().trim();
     const emailHash = encryptionService.hash(normalizedEmail);
 
@@ -77,15 +84,11 @@ class AuthService {
 
     const user = await userRepository.create({ emailEncrypted, emailHash, passwordHash });
 
-    // Seed default categories for the new user (non-fatal if this fails)
-    categoryService.seedDefaultsForUser(user.id).catch((err: unknown) => {
-      logger.error('Failed to seed default categories for user', { userId: user.id, err });
-    });
-
     loggers.auth('user_registered', user.id);
     logger.info('New user registered', { userId: user.id });
 
-    return this.toPublicUser(user, normalizedEmail);
+    // New user has no household yet — they must complete /household/setup
+    return this.toPublicUser(user, normalizedEmail, { householdSetupRequired: true });
   }
 
   /**
@@ -238,7 +241,17 @@ class AuthService {
     const user = await userRepository.findById(userId);
     if (!user) throw new UnauthorizedError('User not found');
     const email = encryptionService.decrypt(user.emailEncrypted);
-    return this.toPublicUser(user, email);
+    const householdId = await householdMemberRepository.getHouseholdId(userId);
+    return this.toPublicUser(user, email, { householdSetupRequired: householdId === null });
+  }
+
+  /** Returns whether registration is open (no household exists yet). */
+  async getRegistrationStatus(): Promise<{ registrationOpen: boolean }> {
+    // Direct DB query to avoid circular dependency with householdService
+    const result = (await getDatabase()('households').count({ cnt: '*' }).first()) as
+      | { cnt: string | number }
+      | undefined;
+    return { registrationOpen: Number(result?.cnt ?? 0) === 0 };
   }
 
   // ─── Private helpers ────────────────────────────────────────────────────────
@@ -320,7 +333,8 @@ class AuthService {
       pushPreferences: PushPreferences | null;
       createdAt: Date;
     },
-    email: string
+    email: string,
+    opts?: { householdSetupRequired?: boolean }
   ): PublicUser {
     return {
       id: user.id,
@@ -338,6 +352,9 @@ class AuthService {
       theme: user.theme,
       pushEnabled: user.pushEnabled,
       pushPreferences: user.pushPreferences,
+      ...(opts?.householdSetupRequired !== undefined && {
+        householdSetupRequired: opts.householdSetupRequired,
+      }),
       createdAt: user.createdAt,
     };
   }

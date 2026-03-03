@@ -2,8 +2,8 @@ import { categoryRepository } from '@repositories/categoryRepository';
 import { AppError } from '@middleware/errorHandler';
 import type { Category, CreateCategoryData, UpdateCategoryData } from '@typings/core.types';
 
-/** Default categories seeded for each new user at registration. */
-const DEFAULT_CATEGORIES: Array<Omit<CreateCategoryData, 'userId'>> = [
+/** Default categories seeded for each new household at setup. */
+const DEFAULT_CATEGORIES: Array<Omit<CreateCategoryData, 'householdId'>> = [
   // Income
   { name: 'Salary', icon: 'briefcase', color: '#22c55e', isIncome: true },
   { name: 'Freelance', icon: 'laptop', color: '#16a34a', isIncome: true },
@@ -30,43 +30,47 @@ const DEFAULT_CATEGORIES: Array<Omit<CreateCategoryData, 'userId'>> = [
 
 class CategoryService {
   /**
-   * Called at user registration to populate their category list with sensible defaults.
+   * Called at household setup to populate the category list with sensible defaults.
    */
-  async seedDefaultsForUser(userId: string): Promise<void> {
-    await categoryRepository.createBatch(DEFAULT_CATEGORIES.map((c) => ({ ...c, userId })));
+  async seedDefaultsForHousehold(householdId: string): Promise<void> {
+    await categoryRepository.createBatch(DEFAULT_CATEGORIES.map((c) => ({ ...c, householdId })));
   }
 
-  async listCategories(userId: string): Promise<Category[]> {
-    return categoryRepository.findAllForUser(userId);
+  async listCategories(householdId: string): Promise<Category[]> {
+    return categoryRepository.findAllForHousehold(householdId);
   }
 
-  async getCategory(userId: string, id: string): Promise<Category> {
-    const category = await categoryRepository.findById(id, userId);
+  async getCategory(householdId: string, id: string): Promise<Category> {
+    const category = await categoryRepository.findById(id, householdId);
     if (!category) throw new AppError('Category not found', 404);
     return category;
   }
 
   async createCategory(
-    userId: string,
-    input: Omit<CreateCategoryData, 'userId'>
+    householdId: string,
+    input: Omit<CreateCategoryData, 'householdId'>
   ): Promise<Category> {
-    return categoryRepository.create({ ...input, userId });
+    return categoryRepository.create({ ...input, householdId });
   }
 
-  async updateCategory(userId: string, id: string, input: UpdateCategoryData): Promise<Category> {
-    const existing = await categoryRepository.findById(id, userId);
+  async updateCategory(
+    householdId: string,
+    id: string,
+    input: UpdateCategoryData
+  ): Promise<Category> {
+    const existing = await categoryRepository.findById(id, householdId);
     if (!existing) throw new AppError('Category not found', 404);
 
-    const updated = await categoryRepository.update(id, userId, input);
+    const updated = await categoryRepository.update(id, householdId, input);
     return updated!;
   }
 
-  async archiveCategory(userId: string, id: string): Promise<void> {
-    const existing = await categoryRepository.findById(id, userId);
+  async archiveCategory(householdId: string, id: string): Promise<void> {
+    const existing = await categoryRepository.findById(id, householdId);
     if (!existing) throw new AppError('Category not found', 404);
     if (!existing.isActive) throw new AppError('Category is already archived', 409);
 
-    await categoryRepository.softDelete(id, userId);
+    await categoryRepository.softDelete(id, householdId);
   }
 }
 

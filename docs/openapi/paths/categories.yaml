@@ -2,11 +2,11 @@ components:
   schemas:
     Category:
       type: object
-      required: [id, userId, name, isIncome, isActive, createdAt, updatedAt]
+      required: [id, householdId, name, isIncome, isActive, createdAt, updatedAt]
       properties:
-        id:       { type: string, format: uuid }
-        userId:   { type: string, format: uuid }
-        name:     { type: string }
+        id:          { type: string, format: uuid }
+        householdId: { type: string, format: uuid }
+        name:        { type: string }
         color:    { type: ['string', 'null'] }
         icon:     { type: ['string', 'null'] }
         isIncome: { type: boolean }

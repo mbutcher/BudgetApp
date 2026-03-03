@@ -1,0 +1,345 @@
+components:
+  schemas:
+    Household:
+      type: object
+      required: [id, name, createdAt, updatedAt]
+      properties:
+        id:        { type: string, format: uuid }
+        name:      { type: string, maxLength: 100 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    HouseholdMember:
+      type: object
+      required: [userId, email, role, joinedAt]
+      properties:
+        userId:      { type: string, format: uuid }
+        displayName: { type: ['string', 'null'] }
+        email:       { type: string, format: email }
+        role:
+          type: string
+          enum: [owner, member]
+        joinedAt: { type: string, format: date-time }
+
+    HouseholdWithMembers:
+      allOf:
+        - $ref: '#/components/schemas/Household'
+        - type: object
+          required: [members]
+          properties:
+            members:
+              type: array
+              items:
+                $ref: '#/components/schemas/HouseholdMember'
+
+    SetupHouseholdRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+
+    AddMemberRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:       { type: string, format: email }
+        password:    { type: string, minLength: 12, maxLength: 128 }
+        displayName: { type: ['string', 'null'], maxLength: 100 }
+
+    AccountShare:
+      type: object
+      required: [id, accountId, sharedWithUserId, accessLevel, createdAt]
+      properties:
+        id:               { type: string, format: uuid }
+        accountId:        { type: string, format: uuid }
+        sharedWithUserId: { type: string, format: uuid }
+        accessLevel:
+          type: string
+          enum: [view, write]
+        createdAt: { type: string, format: date-time }
+
+    PutSharesRequest:
+      type: object
+      required: [shares]
+      properties:
+        shares:
+          type: array
+          items:
+            type: object
+            required: [userId, accessLevel]
+            properties:
+              userId:      { type: string, format: uuid }
+              accessLevel: { type: string, enum: [view, write] }
+
+    PatchShareRequest:
+      type: object
+      required: [accessLevel]
+      properties:
+        accessLevel: { type: string, enum: [view, write] }
+
+    RegistrationStatus:
+      type: object
+      required: [registrationOpen]
+      properties:
+        registrationOpen: { type: boolean, description: True when no household exists yet }
+
+paths:
+  /household/setup:
+    post:
+      summary: Set up the household
+      description: Creates the household for the authenticated user and makes them the owner. Only valid when the user has no household yet.
+      tags: [Household]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetupHouseholdRequest'
+      responses:
+        '201':
+          description: Household created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [success] }
+                  data:
+                    type: object
+                    properties:
+                      household: { $ref: '#/components/schemas/HouseholdWithMembers' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+        '409':
+          description: User already belongs to a household
+
+  /household:
+    get:
+      summary: Get household
+      description: Returns the authenticated user's household with its member list.
+      tags: [Household]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Household with members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [success] }
+                  data:
+                    type: object
+                    properties:
+                      household: { $ref: '#/components/schemas/HouseholdWithMembers' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+
+    patch:
+      summary: Rename household
+      description: Updates the household name. Owner only.
+      tags: [Household]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetupHouseholdRequest'
+      responses:
+        '200':
+          description: Household updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [success] }
+                  data:
+                    type: object
+                    properties:
+                      household: { $ref: '#/components/schemas/Household' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+
+  /household/members:
+    post:
+      summary: Add household member
+      description: Creates a new user account and adds them to the household. Owner only.
+      tags: [Household]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddMemberRequest'
+      responses:
+        '201':
+          description: Member created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [success] }
+                  data:
+                    type: object
+                    properties:
+                      user: { $ref: '#/components/schemas/PublicUser' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '409':
+          description: Email already registered
+
+  /household/members/{userId}:
+    delete:
+      summary: Remove household member
+      description: Removes a member from the household and deactivates their account. Owner only; cannot remove self.
+      tags: [Household]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Member removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [success] }
+                  data: { type: 'null' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+
+  /accounts/{id}/shares:
+    get:
+      summary: Get account shares
+      description: Returns all shares for an account. Account owner only.
+      tags: [Household]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Account shares
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [success] }
+                  data:
+                    type: object
+                    properties:
+                      shares:
+                        type: array
+                        items: { $ref: '#/components/schemas/AccountShare' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+
+    put:
+      summary: Replace account shares
+      description: Replaces all shares for an account. Pass an empty array to remove all shares. Account owner only.
+      tags: [Household]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutSharesRequest'
+      responses:
+        '200':
+          description: Shares updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [success] }
+                  data:
+                    type: object
+                    properties:
+                      shares:
+                        type: array
+                        items: { $ref: '#/components/schemas/AccountShare' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+
+  /accounts/{id}/shares/{userId}:
+    patch:
+      summary: Update share access level
+      description: Updates the access level for a specific member's share. Account owner only.
+      tags: [Household]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchShareRequest'
+      responses:
+        '200':
+          description: Share updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [success] }
+                  data: { type: 'null' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+
+  /auth/registration-status:
+    get:
+      summary: Get registration status
+      description: Returns whether registration is open (no household exists yet). No authentication required.
+      tags: [Authentication]
+      security: []
+      responses:
+        '200':
+          description: Registration status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [success] }
+                  data: { $ref: '#/components/schemas/RegistrationStatus' }

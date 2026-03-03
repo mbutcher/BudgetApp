@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { categoryApi } from '../api/categoryApi';
-import { useAuthStore } from '@features/auth/stores/authStore';
 import { db } from '@lib/db';
 import {
   isOfflineError,
@@ -25,8 +24,7 @@ export function useCategories() {
         return categories;
       } catch (err) {
         if (isOfflineError(err)) {
-          const userId = useAuthStore.getState().user?.id ?? '';
-          return getDecryptedCategories(userId);
+          return getDecryptedCategories();
         }
         throw err;
       }
@@ -42,11 +40,12 @@ export function useCreateCategory() {
       if (!navigator.onLine) {
         if (!hasIndexedDbKey()) throw new OfflineWriteNotAvailableError();
         const localId = crypto.randomUUID();
-        const userId = useAuthStore.getState().user?.id ?? '';
+        const household = qc.getQueryData<{ id: string }>(['household']);
+        const householdId = household?.id ?? '';
         const now = new Date().toISOString();
         await db.categories.put({
           id: localId,
-          userId,
+          householdId,
           name: data.name,
           color: data.color ?? null,
           icon: data.icon ?? null,

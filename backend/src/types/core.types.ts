@@ -56,7 +56,7 @@ export interface UpdateAccountData {
 
 export interface Category {
   id: string;
-  userId: string;
+  householdId: string;
   name: string;
   color: string | null;
   icon: string | null;
@@ -68,7 +68,7 @@ export interface Category {
 }
 
 export interface CreateCategoryData {
-  userId: string;
+  householdId: string;
   name: string;
   color?: string;
   icon?: string;
@@ -814,4 +814,64 @@ export interface NotificationPayload {
   tag?: string;
   /** URL to open when notification is clicked */
   url?: string;
+}
+
+// ─── Household ────────────────────────────────────────────────────────────────
+
+export interface Household {
+  id: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type HouseholdRole = 'owner' | 'member';
+
+export interface HouseholdMember {
+  id: string;
+  householdId: string;
+  userId: string;
+  role: HouseholdRole;
+  joinedAt: Date;
+}
+
+/** Enriched member shape for API responses — includes decrypted email + displayName */
+export interface HouseholdMemberPublic {
+  userId: string;
+  displayName: string | null;
+  email: string;
+  role: HouseholdRole;
+  joinedAt: Date;
+}
+
+export interface HouseholdWithMembers extends Household {
+  members: HouseholdMemberPublic[];
+}
+
+export interface CreateHouseholdData {
+  name: string;
+  ownerUserId: string;
+}
+
+export interface CreateMemberData {
+  email: string;
+  password: string;
+  displayName?: string | null;
+}
+
+// ─── Account Shares ───────────────────────────────────────────────────────────
+
+export type AccountShareAccessLevel = 'view' | 'write';
+
+export interface AccountShare {
+  id: string;
+  accountId: string;
+  sharedWithUserId: string;
+  accessLevel: AccountShareAccessLevel;
+  createdAt: Date;
+}
+
+export interface UpsertAccountShareData {
+  userId: string;
+  accessLevel: AccountShareAccessLevel;
 }

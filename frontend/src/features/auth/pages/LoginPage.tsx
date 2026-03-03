@@ -1,5 +1,6 @@
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useRegistrationStatus } from '@features/household/hooks/useHousehold';
 import { LoginForm } from '../components/LoginForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@components/ui/card';
 
@@ -7,6 +8,7 @@ export function LoginPage() {
   const { t } = useTranslation();
   const [params] = useSearchParams();
   const justRegistered = params.get('registered') === 'true';
+  const { data: regStatus } = useRegistrationStatus();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
@@ -27,6 +29,14 @@ export function LoginPage() {
           </CardHeader>
           <CardContent>
             <LoginForm />
+            {regStatus?.registrationOpen && (
+              <p className="mt-4 text-center text-sm text-muted-foreground">
+                {t('auth.noAccount')}{' '}
+                <Link to="/register" className="text-primary hover:underline">
+                  {t('auth.createOne')}
+                </Link>
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

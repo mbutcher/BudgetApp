@@ -5,29 +5,33 @@ import type { CreateCategoryData, UpdateCategoryData } from '@typings/core.types
 
 class CategoryController {
   list = asyncHandler(async (req: Request, res: Response) => {
-    const categories = await categoryService.listCategories(req.user!.id);
+    const categories = await categoryService.listCategories(req.user!.householdId!);
     res.json({ status: 'success', data: { categories } });
   });
 
   getById = asyncHandler(async (req: Request, res: Response) => {
-    const category = await categoryService.getCategory(req.user!.id, req.params['id']!);
+    const category = await categoryService.getCategory(req.user!.householdId!, req.params['id']!);
     res.json({ status: 'success', data: { category } });
   });
 
   create = asyncHandler(async (req: Request, res: Response) => {
-    const input = req.body as Omit<CreateCategoryData, 'userId'>;
-    const category = await categoryService.createCategory(req.user!.id, input);
+    const input = req.body as Omit<CreateCategoryData, 'householdId'>;
+    const category = await categoryService.createCategory(req.user!.householdId!, input);
     res.status(201).json({ status: 'success', data: { category } });
   });
 
   update = asyncHandler(async (req: Request, res: Response) => {
     const input = req.body as UpdateCategoryData;
-    const category = await categoryService.updateCategory(req.user!.id, req.params['id']!, input);
+    const category = await categoryService.updateCategory(
+      req.user!.householdId!,
+      req.params['id']!,
+      input
+    );
     res.json({ status: 'success', data: { category } });
   });
 
   archive = asyncHandler(async (req: Request, res: Response) => {
-    await categoryService.archiveCategory(req.user!.id, req.params['id']!);
+    await categoryService.archiveCategory(req.user!.householdId!, req.params['id']!);
     res.json({ status: 'success', data: null });
   });
 }

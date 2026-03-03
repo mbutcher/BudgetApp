@@ -266,6 +266,12 @@ class AuthController {
     await apiKeyService.delete(req.user!.id, id!);
     res.status(200).json({ status: 'success', data: null });
   });
+
+  /** GET /auth/registration-status — no auth required */
+  getRegistrationStatus = asyncHandler(async (_req: Request, res: Response) => {
+    const status = await authService.getRegistrationStatus();
+    res.json({ status: 'success', data: status });
+  });
 }
 
 export const authController = new AuthController();

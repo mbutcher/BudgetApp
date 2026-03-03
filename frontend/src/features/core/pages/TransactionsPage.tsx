@@ -7,6 +7,7 @@ import { useAllTags } from '../hooks/useTransactions';
 import { TransactionList } from '../components/TransactionList';
 import { TransactionForm } from '../components/TransactionForm';
 import { TransferLinkingDialog } from '../components/TransferLinkingDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@components/ui/dialog';
 import { useNetworkStore } from '@stores/networkStore';
 import type { Transaction, TransactionFilters, TransferCandidate } from '../types';
 
@@ -143,19 +144,23 @@ export function TransactionsPage() {
         </div>
       </div>
 
-      {/* Form panel */}
-      {(showForm || editing) && (
-        <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-4">
-          <h2 className="text-base font-semibold text-gray-900 mb-4">
-            {editing ? t('transactions.editTransaction') : t('transactions.newTransaction')}
-          </h2>
+      <Dialog
+        open={showForm || editing !== null}
+        onOpenChange={(open) => { if (!open) { setShowForm(false); setEditing(null); } }}
+      >
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editing ? t('transactions.editTransaction') : t('transactions.newTransaction')}
+            </DialogTitle>
+          </DialogHeader>
           <TransactionForm
             transaction={editing ?? undefined}
             onSuccess={() => { setShowForm(false); setEditing(null); }}
             onCancel={() => { setShowForm(false); setEditing(null); }}
           />
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       <TransactionList
         filters={filters}

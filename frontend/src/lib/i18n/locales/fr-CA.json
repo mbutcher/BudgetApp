@@ -602,6 +602,51 @@
     "noTagData": "Aucune donnée d'étiquette pour cette période.",
     "tagSummaryTitle": "Étiquettes"
   },
+  "household": {
+    "setup": {
+      "title": "Configurer votre foyer",
+      "description": "Créez un foyer pour gérer vos finances partagées.",
+      "namePlaceholder": "ex. Famille Dupont",
+      "submit": "Créer le foyer"
+    },
+    "settings": {
+      "title": "Foyer",
+      "memberList": "Membres",
+      "addMember": "Ajouter un membre",
+      "removeMember": "Supprimer",
+      "memberSince": "Membre depuis",
+      "nameLabel": "Nom du foyer"
+    },
+    "roles": {
+      "owner": "Propriétaire",
+      "member": "Membre"
+    },
+    "addMember": {
+      "title": "Ajouter un membre du foyer",
+      "email": "Adresse courriel",
+      "displayName": "Nom d'affichage",
+      "password": "Mot de passe",
+      "accountAccess": "Accès au compte",
+      "noAccess": "Aucun accès",
+      "viewAccess": "Lecture",
+      "writeAccess": "Écriture",
+      "selectAllView": "Tout lecture",
+      "selectAllWrite": "Tout écriture",
+      "submit": "Ajouter le membre"
+    },
+    "share": {
+      "none": "Aucun",
+      "view": "Lecture",
+      "write": "Écriture",
+      "sharedBadge": "Partagé",
+      "myAccounts": "Mes comptes",
+      "sharedWithMe": "Partagé avec moi"
+    },
+    "errors": {
+      "registrationClosed": "Les inscriptions sont fermées.",
+      "setupRequired": "La configuration du foyer est requise."
+    }
+  },
   "simplefin": {
     "title": "Intégration SimpleFIN",
     "subtitle": "Importez automatiquement les transactions de vos comptes bancaires.",

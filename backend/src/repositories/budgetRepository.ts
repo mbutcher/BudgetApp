@@ -124,7 +124,7 @@ class BudgetRepository {
         'bc.category_id',
         'bc.allocated_amount',
         'c.id as c_id',
-        'c.user_id as c_user_id',
+        'c.household_id as c_household_id',
         'c.name as c_name',
         'c.color as c_color',
         'c.icon as c_icon',
@@ -153,7 +153,7 @@ class BudgetRepository {
       return {
         category: {
           id: row['c_id'] as string,
-          userId: row['c_user_id'] as string,
+          householdId: row['c_household_id'] as string,
           name: row['c_name'] as string,
           color: (row['c_color'] as string | null) ?? null,
           icon: (row['c_icon'] as string | null) ?? null,

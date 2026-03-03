@@ -36,8 +36,9 @@ export async function getDecryptedAccounts(userId: string): Promise<Account[]> {
   return rows as Account[];
 }
 
-export async function getDecryptedCategories(userId: string): Promise<Category[]> {
-  const rows = await db.categories.where('userId').equals(userId).toArray();
+export async function getDecryptedCategories(): Promise<Category[]> {
+  // Categories are household-scoped; IndexedDB is single-session so no filter needed.
+  const rows = await db.categories.toArray();
   return rows as Category[];
 }
 

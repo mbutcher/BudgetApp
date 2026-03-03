@@ -5,7 +5,7 @@ import type { Category, CreateCategoryData, UpdateCategoryData } from '@typings/
 function rowToCategory(row: Record<string, unknown>): Category {
   return {
     id: row['id'] as string,
-    userId: row['user_id'] as string,
+    householdId: row['household_id'] as string,
     name: row['name'] as string,
     color: (row['color'] as string | null) ?? null,
     icon: (row['icon'] as string | null) ?? null,
@@ -22,13 +22,17 @@ class CategoryRepository {
     return getDatabase();
   }
 
-  async findById(id: string, userId: string): Promise<Category | null> {
-    const row: unknown = await this.db('categories').where({ id, user_id: userId }).first();
+  async findById(id: string, householdId: string): Promise<Category | null> {
+    const row: unknown = await this.db('categories')
+      .where({ id, household_id: householdId })
+      .first();
     return row ? rowToCategory(row as Record<string, unknown>) : null;
   }
 
-  async findAllForUser(userId: string): Promise<Category[]> {
-    const rows = await this.db('categories').where({ user_id: userId }).orderBy('name', 'asc');
+  async findAllForHousehold(householdId: string): Promise<Category[]> {
+    const rows = await this.db('categories')
+      .where({ household_id: householdId })
+      .orderBy('name', 'asc');
     return rows.map(rowToCategory);
   }
 
@@ -37,7 +41,7 @@ class CategoryRepository {
     await this.db('categories').insert(
       rows.map((r) => ({
         id: randomUUID(),
-        user_id: r.userId,
+        household_id: r.householdId,
         name: r.name,
         color: r.color ?? null,
         icon: r.icon ?? null,
@@ -51,7 +55,7 @@ class CategoryRepository {
     const id = randomUUID();
     await this.db('categories').insert({
       id,
-      user_id: data.userId,
+      household_id: data.householdId,
       name: data.name,
       color: data.color ?? null,
       icon: data.icon ?? null,
@@ -62,21 +66,27 @@ class CategoryRepository {
     return rowToCategory(row as Record<string, unknown>);
   }
 
-  async update(id: string, userId: string, data: UpdateCategoryData): Promise<Category | null> {
+  async update(
+    id: string,
+    householdId: string,
+    data: UpdateCategoryData
+  ): Promise<Category | null> {
     const updates: Record<string, unknown> = {};
     if (data.name !== undefined) updates['name'] = data.name;
     if (data.color !== undefined) updates['color'] = data.color;
     if (data.icon !== undefined) updates['icon'] = data.icon;
     if (data.isActive !== undefined) updates['is_active'] = data.isActive;
 
-    if (Object.keys(updates).length === 0) return this.findById(id, userId);
+    if (Object.keys(updates).length === 0) return this.findById(id, householdId);
 
-    await this.db('categories').where({ id, user_id: userId }).update(updates);
-    return this.findById(id, userId);
+    await this.db('categories').where({ id, household_id: householdId }).update(updates);
+    return this.findById(id, householdId);
   }
 
-  async softDelete(id: string, userId: string): Promise<void> {
-    await this.db('categories').where({ id, user_id: userId }).update({ is_active: false });
+  async softDelete(id: string, householdId: string): Promise<void> {
+    await this.db('categories')
+      .where({ id, household_id: householdId })
+      .update({ is_active: false });
   }
 }
 

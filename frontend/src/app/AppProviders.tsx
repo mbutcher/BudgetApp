@@ -1,9 +1,12 @@
 import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { ThemeProvider } from './ThemeProvider';
+import { Toaster } from '@components/ui/sonner';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { BrowserRouter } from 'react-router-dom';
 import { configureApiClient } from '@lib/api/client';
+import { getApiErrorMessage } from '@lib/api/errors';
 import { useAuthStore } from '@features/auth/stores/authStore';
 import { useNetworkStore } from '@stores/networkStore';
 import { sync, pull } from '@lib/db/syncEngine';
@@ -37,7 +40,9 @@ const queryClient = new QueryClient({
         // attempted without a PRF-derived key (password-only users).
         if (error instanceof OfflineWriteNotAvailableError) {
           useNetworkStore.getState().showPasskeyPrompt();
+          return;
         }
+        toast.error(getApiErrorMessage(error));
       },
     },
   },
@@ -151,6 +156,7 @@ export function AppProviders({ children }: AppProvidersProps) {
           <SyncController />
           {children}
         </BrowserRouter>
+        <Toaster position="bottom-right" richColors />
         {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>
     </ThemeProvider>

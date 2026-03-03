@@ -6,7 +6,6 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { Account, AccountType, CreateAccountInput } from '../types';
 import { useCreateAccount, useUpdateAccount } from '../hooks/useAccounts';
-import { getApiErrorMessage } from '@lib/api/errors';
 import { useAuthStore } from '@features/auth/stores/authStore';
 
 const ASSET_TYPES = new Set<AccountType>(['checking', 'savings', 'investment', 'other']);
@@ -88,7 +87,6 @@ export function AccountForm({ account, onSuccess, onCancel }: AccountFormProps) 
         },
   });
 
-  const error = createAccount.error ?? updateAccount.error;
   const watchedType = watch('type');
   const watchedStartingBalance = watch('startingBalance');
   const watchedColor = watch('color') ?? '';
@@ -132,11 +130,6 @@ export function AccountForm({ account, onSuccess, onCancel }: AccountFormProps) 
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {error && (
-        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive">
-          {getApiErrorMessage(error)}
-        </div>
-      )}
 
       {/* Account Name */}
       <div>

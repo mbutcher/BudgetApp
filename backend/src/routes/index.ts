@@ -16,6 +16,7 @@ import budgetViewRoutes from './budgetViewRoutes';
 import recurringTransactionRoutes from './recurringTransactionRoutes';
 import dashboardRoutes from './dashboardRoutes';
 import pushRoutes from './pushRoutes';
+import householdRoutes from './householdRoutes';
 
 const router = Router();
 
@@ -39,5 +40,6 @@ router.use('/budget-view', budgetViewRoutes);
 router.use('/recurring-transactions', recurringTransactionRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/push', pushRoutes);
+router.use('/household', householdRoutes);
 
 export default router;

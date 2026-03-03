@@ -6,7 +6,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isInitialized } = useAuthStore();
+  const { isAuthenticated, isInitialized, user } = useAuthStore();
   const location = useLocation();
 
   // Still performing initial auth check — render nothing to avoid flash
@@ -20,6 +20,12 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!isAuthenticated) {
     return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname)}`} replace />;
+  }
+
+  // Redirect to household setup if the user has no household yet
+  // (skip redirect if already on /setup to avoid redirect loop)
+  if (user?.householdSetupRequired && location.pathname !== '/setup') {
+    return <Navigate to="/setup" replace />;
   }
 
   return <>{children}</>;

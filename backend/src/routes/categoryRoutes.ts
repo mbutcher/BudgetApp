@@ -1,12 +1,14 @@
 import { Router } from 'express';
 import { categoryController } from '@controllers/categoryController';
 import { authenticateAny } from '@middleware/authenticate';
+import { loadHousehold } from '@middleware/requireHousehold';
 import { validateRequest } from '@middleware/validateRequest';
 import { createCategorySchema, updateCategorySchema } from '@validators/coreValidators';
 
 const router = Router();
 
 router.use(authenticateAny);
+router.use(loadHousehold);
 
 router.get('/', categoryController.list);
 router.post('/', validateRequest(createCategorySchema), categoryController.create);

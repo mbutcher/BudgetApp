@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { User, Plug, Shield, LogOut } from 'lucide-react';
+import { User, Plug, Shield, LogOut, Users } from 'lucide-react';
 import { authApi } from '@features/auth/api/authApi';
 import { useAuthStore } from '@features/auth/stores/authStore';
 import {
@@ -90,6 +90,13 @@ export function UserAvatarMenu({ onNav }: UserAvatarMenuProps = {}) {
         >
           <Shield className="h-4 w-4 shrink-0" />
           {t('settings.security')}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          active={path.startsWith('/settings/household')}
+          onClick={() => nav('/settings/household')}
+        >
+          <Users className="h-4 w-4 shrink-0" />
+          {t('household.settings.title')}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

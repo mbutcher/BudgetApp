@@ -55,7 +55,7 @@ export interface UpdateAccountInput {
 
 export interface Category {
   id: string;
-  userId: string;
+  householdId: string;
   name: string;
   color: string | null;
   icon: string | null;

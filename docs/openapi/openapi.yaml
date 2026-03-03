@@ -68,6 +68,8 @@ tags:
     description: User-configurable dashboard layout and smart hints
   - name: Push Notifications
     description: Web Push subscription management and VAPID key retrieval
+  - name: Household
+    description: Household management, member management, and account sharing
 
 security:
   - bearerAuth: []

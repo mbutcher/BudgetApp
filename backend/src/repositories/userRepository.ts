@@ -129,7 +129,8 @@ class UserRepository {
     if (data.weekStart !== undefined) updates['week_start'] = data.weekStart;
     if (data.theme !== undefined) updates['theme'] = data.theme;
     if (data.pushEnabled !== undefined) updates['push_enabled'] = data.pushEnabled;
-    if (data.pushPreferences !== undefined) updates['push_preferences'] = JSON.stringify(data.pushPreferences);
+    if (data.pushPreferences !== undefined)
+      updates['push_preferences'] = JSON.stringify(data.pushPreferences);
 
     if (Object.keys(updates).length > 0) {
       await this.db('users').where({ id: userId }).update(updates);
@@ -140,6 +141,10 @@ class UserRepository {
     await this.db('users').where({ id: userId }).update({
       password_hash: newPasswordHash,
     });
+  }
+
+  async deactivate(userId: string): Promise<void> {
+    await this.db('users').where({ id: userId }).update({ is_active: false });
   }
 }
 

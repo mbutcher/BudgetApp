@@ -20,6 +20,8 @@ export interface User {
   theme: 'default' | 'slate' | 'forest' | 'warm' | 'midnight';
   pushEnabled: boolean;
   pushPreferences: PushPreferences | null;
+  /** True when the user has no household yet and must complete /setup before using the app. */
+  householdSetupRequired?: boolean;
   createdAt: string;
 }
 

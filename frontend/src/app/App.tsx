@@ -24,6 +24,8 @@ import { ReportsPage } from '@features/reports/pages/ReportsPage';
 import { RecurringTransactionsPage } from '@features/core/pages/RecurringTransactionsPage';
 import { AccountSettingsPage } from '@features/settings/pages/AccountSettingsPage';
 import { IntegrationsSettingsPage } from '@features/settings/pages/IntegrationsSettingsPage';
+import { HouseholdSetupPage } from '@features/household/pages/HouseholdSetupPage';
+import { HouseholdSettingsPage } from '@features/household/pages/HouseholdSettingsPage';
 
 /**
  * AuthInitializer calls GET /auth/me on mount to restore session from
@@ -55,6 +57,16 @@ function App() {
         <Route path="/login/two-factor" element={<TwoFactorPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
+        {/* Household setup — auth required but no household yet */}
+        <Route
+          path="/setup"
+          element={
+            <ProtectedRoute>
+              <HouseholdSetupPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Protected layout route — all children share AppLayout sidebar */}
         <Route
           element={
@@ -77,6 +89,7 @@ function App() {
           <Route path="/settings/account" element={<AccountSettingsPage />} />
           <Route path="/settings/integrations" element={<IntegrationsSettingsPage />} />
           <Route path="/settings/security" element={<SecuritySettingsPage />} />
+          <Route path="/settings/household" element={<HouseholdSettingsPage />} />
           {/* Legacy route redirects */}
           <Route path="/settings" element={<Navigate to="/settings/account" replace />} />
           <Route path="/settings/preferences" element={<Navigate to="/settings/account" replace />} />

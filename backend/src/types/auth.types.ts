@@ -135,6 +135,8 @@ export interface PublicUser {
   theme: ThemeName;
   pushEnabled: boolean;
   pushPreferences: PushPreferences | null;
+  /** True when the user has no household yet and must complete /setup before using the app. */
+  householdSetupRequired?: boolean;
   createdAt: Date;
 }
 

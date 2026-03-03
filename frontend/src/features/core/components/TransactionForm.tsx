@@ -5,7 +5,6 @@ import { z } from 'zod';
 import { useAccounts } from '../hooks/useAccounts';
 import { useCategories } from '../hooks/useCategories';
 import { useCreateTransaction, useUpdateTransaction, useAllTags } from '../hooks/useTransactions';
-import { getApiErrorMessage } from '@lib/api/errors';
 import type { Transaction } from '../types';
 
 const transactionSchema = z.object({
@@ -71,8 +70,6 @@ export function TransactionForm({
           isCleared: false,
         },
   });
-
-  const error = createTx.error ?? updateTx.error;
 
   const suggestions = useMemo(
     () =>
@@ -154,11 +151,6 @@ export function TransactionForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-          {getApiErrorMessage(error)}
-        </div>
-      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div>

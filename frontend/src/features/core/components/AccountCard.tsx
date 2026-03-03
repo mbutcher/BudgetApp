@@ -16,12 +16,14 @@ interface AccountCardProps {
 
 export function AccountCard({ account, onEdit, onArchive, className }: AccountCardProps) {
   const { t } = useTranslation();
+  const currentUserId = useAuthStore((s) => s.user?.id);
   const defaultCurrency = useAuthStore((s) => s.user?.defaultCurrency ?? 'CAD');
   const { currency: formatCurrency } = useFormatters();
   const showConversion = account.currency.toUpperCase() !== defaultCurrency.toUpperCase();
   const { data: rateData } = useExchangeRate(account.currency, defaultCurrency);
   const convertedBalance =
     showConversion && rateData ? Math.abs(account.currentBalance) * rateData.rate : null;
+  const isShared = account.userId !== currentUserId;
 
   return (
     <div
@@ -41,7 +43,14 @@ export function AccountCard({ account, onEdit, onArchive, className }: AccountCa
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="font-medium text-gray-900 truncate">{account.name}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="font-medium text-gray-900 truncate">{account.name}</p>
+              {isShared && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary shrink-0">
+                  {t('household.share.sharedBadge')}
+                </span>
+              )}
+            </div>
             <p className="text-sm text-gray-500">
               {t(`accounts.types.${account.type}`)}
               {account.institution && ` · ${account.institution}`}

@@ -103,7 +103,7 @@ class SyncController {
 
     const categories: Category[] = (categoryRows as Record<string, unknown>[]).map((r) => ({
       id: String(r['id']),
-      userId: String(r['user_id']),
+      householdId: String(r['household_id']),
       name: String(r['name']),
       color: r['color'] != null ? String(r['color']) : null,
       icon: r['icon'] != null ? String(r['icon']) : null,

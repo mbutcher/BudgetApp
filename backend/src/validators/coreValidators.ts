@@ -548,6 +548,61 @@ export const changePasswordSchema = Joi.object({
   }),
 });
 
+// ─── Household Validators ─────────────────────────────────────────────────────
+
+export const setupHouseholdSchema = Joi.object({
+  name: Joi.string().trim().min(1).max(100).required().messages({
+    'any.required': 'Household name is required',
+    'string.min': 'Household name must not be empty',
+    'string.max': 'Household name must be 100 characters or fewer',
+  }),
+});
+
+export const updateHouseholdSchema = Joi.object({
+  name: Joi.string().trim().min(1).max(100).required().messages({
+    'any.required': 'Household name is required',
+    'string.min': 'Household name must not be empty',
+    'string.max': 'Household name must be 100 characters or fewer',
+  }),
+});
+
+export const addMemberSchema = Joi.object({
+  email: Joi.string().email().required().messages({
+    'any.required': 'Email is required',
+    'string.email': 'Email must be a valid email address',
+  }),
+  password: Joi.string().min(12).max(128).required().messages({
+    'any.required': 'Password is required',
+    'string.min': 'Password must be at least 12 characters',
+  }),
+  displayName: Joi.string().max(100).optional().allow(null, ''),
+});
+
+export const putSharesSchema = Joi.object({
+  shares: Joi.array()
+    .items(
+      Joi.object({
+        userId: Joi.string().uuid().required().messages({
+          'any.required': 'userId is required',
+          'string.guid': 'userId must be a valid UUID',
+        }),
+        accessLevel: Joi.string().valid('view', 'write').required().messages({
+          'any.required': 'accessLevel is required',
+          'any.only': 'accessLevel must be view or write',
+        }),
+      })
+    )
+    .required()
+    .messages({ 'any.required': 'shares array is required' }),
+});
+
+export const patchShareSchema = Joi.object({
+  accessLevel: Joi.string().valid('view', 'write').required().messages({
+    'any.required': 'accessLevel is required',
+    'any.only': 'accessLevel must be view or write',
+  }),
+});
+
 // ─── Push Notification Validators ─────────────────────────────────────────────
 
 export const subscribePushSchema = Joi.object({

@@ -97,4 +97,7 @@ router.post(
 );
 router.delete('/api-keys/:id', authenticate, authController.deleteApiKey);
 
+// ─── Registration status (no auth required) ───────────────────────────────────
+router.get('/registration-status', authController.getRegistrationStatus);
+
 export default router;

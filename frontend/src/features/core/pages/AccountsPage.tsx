@@ -36,6 +36,7 @@ export function AccountsPage() {
   const activeAccounts = accounts.filter((a) => a.isActive);
   const archivedAccounts = accounts.filter((a) => !a.isActive);
 
+  const currentUserId = useAuthStore((s) => s.user?.id);
   const defaultCurrency = useAuthStore((s) => s.user?.defaultCurrency ?? 'CAD');
 
   // Build unique currency pairs needed for conversion
@@ -130,6 +131,10 @@ export function AccountsPage() {
 
     return list;
   }, [activeAccounts, typeFilter, institutionFilter, groupBy, sortBy]);
+
+  const myAccounts = filteredAccounts.filter((a) => a.userId === currentUserId);
+  const sharedAccounts = filteredAccounts.filter((a) => a.userId !== currentUserId);
+  const hasSharedAccounts = sharedAccounts.length > 0;
 
   const hasFilters =
     typeFilter !== 'all' || institutionFilter !== 'all' || groupBy !== 'all' || sortBy !== 'name-asc';
@@ -288,14 +293,19 @@ export function AccountsPage() {
             </div>
           )}
 
-          {filteredAccounts.length === 0 && activeAccounts.length > 0 && (
+          {myAccounts.length === 0 && sharedAccounts.length === 0 && activeAccounts.length > 0 && (
             <div className="text-center py-8 text-gray-400">
               <p className="text-sm">{t('accounts.noMatch')}</p>
             </div>
           )}
 
+          {hasSharedAccounts && myAccounts.length > 0 && (
+            <h2 className="text-sm font-medium text-muted-foreground mb-2">
+              {t('household.share.myAccounts')}
+            </h2>
+          )}
           <div className="space-y-3">
-            {filteredAccounts.map((account) => (
+            {myAccounts.map((account) => (
               <AccountCard
                 key={account.id}
                 account={account}
@@ -304,6 +314,19 @@ export function AccountsPage() {
               />
             ))}
           </div>
+
+          {hasSharedAccounts && (
+            <div className={myAccounts.length > 0 ? 'mt-6' : undefined}>
+              <h2 className="text-sm font-medium text-muted-foreground mb-2">
+                {t('household.share.sharedWithMe')}
+              </h2>
+              <div className="space-y-3">
+                {sharedAccounts.map((account) => (
+                  <AccountCard key={account.id} account={account} />
+                ))}
+              </div>
+            </div>
+          )}
 
           {archivedAccounts.length > 0 && (
             <details className="mt-6">

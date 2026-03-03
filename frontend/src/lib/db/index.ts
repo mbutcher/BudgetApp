@@ -58,6 +58,11 @@ class BudgetDB extends Dexie {
     this.version(5).stores({
       budgetViewCache: 'id, cachedAt',
     });
+
+    // v6: categories migrated from userId index → householdId index
+    this.version(6).stores({
+      categories: 'id, householdId, updatedAt, isActive',
+    });
   }
 }
 

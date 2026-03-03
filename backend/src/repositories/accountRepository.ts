@@ -28,14 +28,40 @@ class AccountRepository {
   }
 
   async findById(id: string, userId: string): Promise<Account | null> {
-    const row: unknown = await this.db('accounts').where({ id, user_id: userId }).first();
+    const db = this.db;
+    const row: unknown = await db('accounts')
+      .where('accounts.id', id)
+      .where((qb) => {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        qb.where('accounts.user_id', userId).orWhereExists(function () {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          this.select(1)
+            .from('account_shares')
+            .where('account_id', db.ref('accounts.id'))
+            .where('shared_with_user_id', userId);
+        });
+      })
+      .select('accounts.*')
+      .first();
     return row ? rowToAccount(row as Record<string, unknown>) : null;
   }
 
   async findAllForUser(userId: string, activeOnly = true): Promise<Account[]> {
-    let query = this.db('accounts').where({ user_id: userId });
-    if (activeOnly) query = query.where({ is_active: true });
-    const rows = await query.orderBy('name', 'asc');
+    const db = this.db;
+    let query = db('accounts')
+      .where((qb) => {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        qb.where('accounts.user_id', userId).orWhereExists(function () {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          this.select(1)
+            .from('account_shares')
+            .where('account_id', db.ref('accounts.id'))
+            .where('shared_with_user_id', userId);
+        });
+      })
+      .select('accounts.*');
+    if (activeOnly) query = query.where('accounts.is_active', true);
+    const rows = await query.orderBy('accounts.name', 'asc');
     return rows.map(rowToAccount);
   }
 
@@ -80,6 +106,7 @@ class AccountRepository {
 
     if (Object.keys(updates).length === 0) return this.findById(id, userId);
 
+    // Write operations are owner-only
     await this.db('accounts').where({ id, user_id: userId }).update(updates);
     return this.findById(id, userId);
   }
@@ -94,6 +121,7 @@ class AccountRepository {
   }
 
   async softDelete(id: string, userId: string): Promise<void> {
+    // Soft delete is owner-only
     await this.db('accounts').where({ id, user_id: userId }).update({ is_active: false });
   }
 

@@ -602,6 +602,51 @@
     "noTagData": "No tag data for this period.",
     "tagSummaryTitle": "Tags"
   },
+  "household": {
+    "setup": {
+      "title": "Set Up Your Household",
+      "description": "Create a household to manage your shared finances.",
+      "namePlaceholder": "e.g. Smith Family",
+      "submit": "Create Household"
+    },
+    "settings": {
+      "title": "Household",
+      "memberList": "Members",
+      "addMember": "Add Member",
+      "removeMember": "Remove",
+      "memberSince": "Member since",
+      "nameLabel": "Household Name"
+    },
+    "roles": {
+      "owner": "Owner",
+      "member": "Member"
+    },
+    "addMember": {
+      "title": "Add Household Member",
+      "email": "Email Address",
+      "displayName": "Display Name",
+      "password": "Password",
+      "accountAccess": "Account Access",
+      "noAccess": "No access",
+      "viewAccess": "View",
+      "writeAccess": "Write",
+      "selectAllView": "All View",
+      "selectAllWrite": "All Write",
+      "submit": "Add Member"
+    },
+    "share": {
+      "none": "None",
+      "view": "View",
+      "write": "Write",
+      "sharedBadge": "Shared",
+      "myAccounts": "My Accounts",
+      "sharedWithMe": "Shared with Me"
+    },
+    "errors": {
+      "registrationClosed": "Registration is closed.",
+      "setupRequired": "Household setup is required."
+    }
+  },
   "simplefin": {
     "title": "SimpleFIN Integration",
     "subtitle": "Automatically import transactions from your bank accounts.",
