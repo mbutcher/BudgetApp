@@ -640,7 +640,11 @@
       "write": "Écriture",
       "sharedBadge": "Partagé",
       "myAccounts": "Mes comptes",
-      "sharedWithMe": "Partagé avec moi"
+      "sharedWithMe": "Partagé avec moi",
+      "manageTitle": "Gérer l'accès",
+      "manageDescription": "Contrôlez quels membres du foyer peuvent consulter ou modifier ce compte.",
+      "noMembers": "Aucun autre membre du foyer à qui partager.",
+      "saveSharing": "Enregistrer l'accès"
     },
     "errors": {
       "registrationClosed": "Les inscriptions sont fermées.",

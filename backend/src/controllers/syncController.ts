@@ -3,6 +3,7 @@ import { asyncHandler, AppError } from '@middleware/errorHandler';
 import { getDatabase } from '@config/database';
 import { encryptionService } from '@services/encryption/encryptionService';
 import { transactionTagRepository } from '@repositories/transactionTagRepository';
+import { householdMemberRepository } from '@repositories/householdMemberRepository';
 import type {
   Account,
   Category,
@@ -39,6 +40,9 @@ class SyncController {
 
     const db = getDatabase();
 
+    // Resolve household for categories (categories are household-scoped since Phase 10)
+    const householdId = await householdMemberRepository.getHouseholdId(userId);
+
     const [
       accountRows,
       categoryRows,
@@ -52,9 +56,11 @@ class SyncController {
         ? db('accounts').where({ user_id: userId }).where('updated_at', '>=', since)
         : db('accounts').where({ user_id: userId }),
 
-      since
-        ? db('categories').where({ user_id: userId }).where('updated_at', '>=', since)
-        : db('categories').where({ user_id: userId }),
+      householdId
+        ? since
+          ? db('categories').where({ household_id: householdId }).where('updated_at', '>=', since)
+          : db('categories').where({ household_id: householdId })
+        : Promise.resolve([]),
 
       since
         ? db('transactions').where({ user_id: userId }).where('updated_at', '>=', since)

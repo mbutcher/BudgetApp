@@ -640,7 +640,11 @@
       "write": "Write",
       "sharedBadge": "Shared",
       "myAccounts": "My Accounts",
-      "sharedWithMe": "Shared with Me"
+      "sharedWithMe": "Shared with Me",
+      "manageTitle": "Manage Access",
+      "manageDescription": "Control which household members can view or edit this account.",
+      "noMembers": "No other household members to share with.",
+      "saveSharing": "Save Access"
     },
     "errors": {
       "registrationClosed": "Registration is closed.",

@@ -6,6 +6,7 @@ import { AccountForm } from '../components/AccountForm';
 import { useExchangeRates } from '../hooks/useExchangeRate';
 import { useAuthStore } from '@features/auth/stores/authStore';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@components/ui/dialog';
+import { ManageSharesDialog } from '@features/household/components/ManageSharesDialog';
 import type { Account, AccountType } from '../types';
 
 type SortKey = 'name-asc' | 'name-desc' | 'balance-desc' | 'balance-asc' | 'type' | 'rate-desc' | 'rate-asc';
@@ -26,6 +27,7 @@ export function AccountsPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Account | null>(null);
+  const [sharingAccount, setSharingAccount] = useState<Account | null>(null);
 
   // Filter / sort state
   const [typeFilter, setTypeFilter] = useState<AccountType | 'all'>('all');
@@ -191,6 +193,15 @@ export function AccountsPage() {
         </button>
       </div>
 
+      {/* Share management dialog */}
+      {sharingAccount && (
+        <ManageSharesDialog
+          account={sharingAccount}
+          open
+          onClose={() => setSharingAccount(null)}
+        />
+      )}
+
       {/* Edit / Create modal */}
       <Dialog open={showForm || editing !== null} onOpenChange={(open) => { if (!open) closeForm(); }}>
         <DialogContent className="overflow-y-auto max-h-[90vh]">
@@ -311,6 +322,7 @@ export function AccountsPage() {
                 account={account}
                 onEdit={() => openEdit(account)}
                 onArchive={() => handleArchive(account)}
+                onShare={() => setSharingAccount(account)}
               />
             ))}
           </div>
