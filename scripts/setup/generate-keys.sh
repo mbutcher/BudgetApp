@@ -4,6 +4,13 @@ set -e
 # Script to generate encryption keys and secrets for Budget App
 # Usage: ./generate-keys.sh <environment>
 # Example: ./generate-keys.sh development
+#          ./generate-keys.sh production
+#
+# Production mode: generates ONE master secret and derives all sub-keys from it
+# deterministically using HMAC-SHA256 (a standard KDF pattern).
+# The master secret is the only value that needs to be backed up.
+#
+# Development mode: generates independent random secrets (simpler, no backup needed).
 
 ENVIRONMENT=${1:-development}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -22,9 +29,91 @@ fi
 
 # Create secrets directory
 mkdir -p "$SECRET_DIR"
+chmod 700 "$SECRET_DIR"
 echo "📁 Created directory: $SECRET_DIR"
 
-# Function to generate and save secret
+# ─── Helper functions ──────────────────────────────────────────────────────────
+
+write_secret() {
+  local filename="$1"
+  local value="$2"
+  local filepath="$SECRET_DIR/$filename"
+  printf '%s' "$value" > "$filepath"
+  chmod 600 "$filepath"
+}
+
+# Convert a hex string to raw binary (pure bash + printf; no xxd required)
+hex_to_bin() {
+  local hex="$1"
+  printf '%b' "$(printf '%s' "$hex" | sed 's/../\\x&/g')"
+}
+
+# ─── Production: master secret + derived sub-keys ─────────────────────────────
+
+generate_production_secrets() {
+  local master_file="$SECRET_DIR/master_secret.txt"
+
+  # Generate master secret only if it doesn't already exist
+  if [[ ! -f "$master_file" ]]; then
+    openssl rand -hex 32 > "$master_file"
+    chmod 600 "$master_file"
+    echo "✅ Generated: master_secret.txt (NEW)"
+  else
+    echo "⚠️  master_secret.txt already exists — re-deriving all sub-keys from it"
+  fi
+
+  local master_hex
+  master_hex=$(cat "$master_file")
+
+  # Derive HMAC-SHA256(key=master_secret_bytes, msg=label) for each sub-key.
+  # The info label namespaces each derived key so they are cryptographically
+  # independent even though they share the same master secret.
+  derive_hex() {
+    # Returns 64 hex chars (32 bytes)
+    printf '%s' "$1" | openssl dgst -sha256 -mac HMAC -macopt "hexkey:${master_hex}" 2>/dev/null | awk '{print $NF}'
+  }
+
+  derive_base64() {
+    # Returns base64 of 32 derived bytes
+    hex_to_bin "$(derive_hex "$1")" | base64 | tr -d '\n'
+  }
+
+  derive_alnum32() {
+    # Returns 32 alphanumeric chars suitable for passwords
+    hex_to_bin "$(derive_hex "$1")" | base64 | tr -d '\n' | tr -cd 'A-Za-z0-9' | head -c 32
+  }
+
+  echo ""
+  echo "Deriving all sub-keys from master secret..."
+
+  write_secret "jwt_secret.txt"            "$(derive_base64  'budgetapp:jwt-secret')"
+  echo "✅ Derived: jwt_secret.txt"
+
+  write_secret "encryption_key.txt"        "$(derive_hex     'budgetapp:encryption-key')"
+  echo "✅ Derived: encryption_key.txt"
+
+  write_secret "password_pepper.txt"       "$(derive_base64  'budgetapp:password-pepper')"
+  echo "✅ Derived: password_pepper.txt"
+
+  write_secret "db_password.txt"           "$(derive_alnum32 'budgetapp:db-password')"
+  echo "✅ Derived: db_password.txt"
+
+  write_secret "db_root_password.txt"      "$(derive_alnum32 'budgetapp:db-root-password')"
+  echo "✅ Derived: db_root_password.txt"
+
+  write_secret "db_encryption_key.txt"     "$(derive_hex     'budgetapp:db-encryption-key')"
+  echo "✅ Derived: db_encryption_key.txt"
+
+  write_secret "redis_password.txt"        "$(derive_alnum32 'budgetapp:redis-password')"
+  echo "✅ Derived: redis_password.txt"
+
+  write_secret "backup_encryption_key.txt" "$(derive_base64  'budgetapp:backup-encryption-key')"
+  echo "✅ Derived: backup_encryption_key.txt"
+}
+
+# ─── Development: independent random secrets ──────────────────────────────────
+
+# Helper — generate and save a random secret (idempotent: skips if file exists)
 generate_secret() {
   local filename=$1
   local method=$2
@@ -37,77 +126,68 @@ generate_secret() {
   fi
 
   case $method in
-    base64)
-      openssl rand -base64 "$length" > "$filepath"
-      ;;
-    hex)
-      openssl rand -hex "$length" > "$filepath"
-      ;;
-    alphanumeric)
-      LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c "$length" > "$filepath"
-      ;;
+    base64)       openssl rand -base64 "$length" > "$filepath" ;;
+    hex)          openssl rand -hex "$length" > "$filepath" ;;
+    alphanumeric) LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c "$length" > "$filepath" ;;
   esac
 
   chmod 600 "$filepath"
   echo "✅ Generated: $filename"
 }
 
-# Generate common secrets
-echo ""
-echo "Generating authentication secrets..."
-generate_secret "jwt_secret.txt" "base64" 64
-generate_secret "password_pepper.txt" "base64" 32
-
-echo ""
-echo "Generating encryption keys..."
-generate_secret "encryption_key.txt" "hex" 32
-
-echo ""
-echo "Generating database credentials..."
-generate_secret "db_password.txt" "alphanumeric" 32
-
-# Production-specific secrets
-if [[ "$ENVIRONMENT" == "production" ]]; then
+generate_development_secrets() {
   echo ""
-  echo "Generating production-specific secrets..."
-  generate_secret "db_root_password.txt" "alphanumeric" 32
-  generate_secret "db_encryption_key.txt" "hex" 32
-  generate_secret "redis_password.txt" "alphanumeric" 32
-  generate_secret "backup_encryption_key.txt" "base64" 32
+  echo "Generating authentication secrets..."
+  generate_secret "jwt_secret.txt" "base64" 64
+  generate_secret "password_pepper.txt" "base64" 32
+
+  echo ""
+  echo "Generating encryption keys..."
+  generate_secret "encryption_key.txt" "hex" 32
+
+  echo ""
+  echo "Generating database credentials..."
+  generate_secret "db_password.txt" "alphanumeric" 32
+}
+
+# ─── Run ──────────────────────────────────────────────────────────────────────
+
+if [[ "$ENVIRONMENT" == "production" ]]; then
+  generate_production_secrets
+else
+  generate_development_secrets
 fi
 
-# Create .env file if it doesn't exist
+# ─── .env file ────────────────────────────────────────────────────────────────
+
 ENV_FILE="$SECRET_DIR/.env"
 if [[ ! -f "$ENV_FILE" ]]; then
   echo ""
   echo "Creating $ENVIRONMENT .env file..."
   cp "$PROJECT_ROOT/secrets/.env.example" "$ENV_FILE"
 
-  # Update environment-specific values
   if [[ "$ENVIRONMENT" == "development" ]]; then
     sed -i.bak 's/NODE_ENV=.*/NODE_ENV=development/' "$ENV_FILE"
-    sed -i.bak 's/APP_URL=.*/APP_URL=http:\/\/localhost:3000/' "$ENV_FILE"
-    sed -i.bak 's/CORS_ORIGIN=.*/CORS_ORIGIN=http:\/\/localhost:3000/' "$ENV_FILE"
+    sed -i.bak 's|APP_URL=.*|APP_URL=http://localhost:3000|' "$ENV_FILE"
+    sed -i.bak 's|CORS_ORIGIN=.*|CORS_ORIGIN=http://localhost:3000|' "$ENV_FILE"
     sed -i.bak 's/WEBAUTHN_RP_ID=.*/WEBAUTHN_RP_ID=localhost/' "$ENV_FILE"
-    sed -i.bak 's/WEBAUTHN_ORIGIN=.*/WEBAUTHN_ORIGIN=http:\/\/localhost:3000/' "$ENV_FILE"
+    sed -i.bak 's|WEBAUTHN_ORIGIN=.*|WEBAUTHN_ORIGIN=http://localhost:3000|' "$ENV_FILE"
     sed -i.bak 's/LOG_LEVEL=.*/LOG_LEVEL=debug/' "$ENV_FILE"
   else
     sed -i.bak 's/NODE_ENV=.*/NODE_ENV=production/' "$ENV_FILE"
-    sed -i.bak 's/APP_URL=.*/APP_URL=https:\/\/budget.local/' "$ENV_FILE"
-    sed -i.bak 's/CORS_ORIGIN=.*/CORS_ORIGIN=https:\/\/budget.local/' "$ENV_FILE"
+    sed -i.bak 's|APP_URL=.*|APP_URL=https://budget.local|' "$ENV_FILE"
+    sed -i.bak 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://budget.local|' "$ENV_FILE"
     sed -i.bak 's/WEBAUTHN_RP_ID=.*/WEBAUTHN_RP_ID=budget.local/' "$ENV_FILE"
-    sed -i.bak 's/WEBAUTHN_ORIGIN=.*/WEBAUTHN_ORIGIN=https:\/\/budget.local/' "$ENV_FILE"
+    sed -i.bak 's|WEBAUTHN_ORIGIN=.*|WEBAUTHN_ORIGIN=https://budget.local|' "$ENV_FILE"
     sed -i.bak 's/LOG_LEVEL=.*/LOG_LEVEL=info/' "$ENV_FILE"
   fi
 
-  # Remove backup file
   rm -f "$ENV_FILE.bak"
-
   chmod 600 "$ENV_FILE"
   echo "✅ Created: .env"
 fi
 
-# Create .env.db for production
+# .env.db for production
 if [[ "$ENVIRONMENT" == "production" ]]; then
   ENV_DB_FILE="$SECRET_DIR/.env.db"
   if [[ ! -f "$ENV_DB_FILE" ]]; then
@@ -125,8 +205,7 @@ EOF
   fi
 fi
 
-# Set directory permissions
-chmod 700 "$SECRET_DIR"
+# ─── Summary ─────────────────────────────────────────────────────────────────
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -136,18 +215,16 @@ echo ""
 echo "📁 Secrets location: $SECRET_DIR"
 echo "🔒 All files have 600 permissions (owner read/write only)"
 echo ""
-echo "⚠️  IMPORTANT SECURITY REMINDERS:"
-echo "   1. Never commit these files to version control"
-echo "   2. Backup production secrets to encrypted external storage"
-echo "   3. Rotate keys every 90 days in production"
-echo "   4. Use different secrets for each environment"
-echo ""
 
 if [[ "$ENVIRONMENT" == "production" ]]; then
-  echo "📝 Next steps for production:"
-  echo "   1. Copy secrets to Unraid: scp -r $SECRET_DIR user@unraid:/mnt/user/appdata/budget-app/secrets/"
-  echo "   2. Verify permissions on Unraid: chmod 700 /mnt/user/appdata/budget-app/secrets/"
-  echo "   3. Generate SSL certificates: ./scripts/setup/generate-ssl-cert.sh"
+  echo "🔑 MASTER SECRET: $SECRET_DIR/master_secret.txt"
+  echo "   This is the only file you need to back up."
+  echo "   All other secrets are derived from it and can be regenerated."
+  echo ""
+  echo "⚠️  IMPORTANT:"
+  echo "   1. Never commit secrets/ to version control"
+  echo "   2. Back up master_secret.txt to encrypted external storage"
+  echo "   3. To recover secrets: ./scripts/setup/derive-secrets.sh <master-hex>"
   echo ""
 fi
 

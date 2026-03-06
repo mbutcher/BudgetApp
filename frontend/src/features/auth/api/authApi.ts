@@ -112,3 +112,21 @@ export const authApi = {
 
   deleteApiKey: (id: string) => apiClient.delete<ApiResponse<null>>(`/auth/api-keys/${id}`),
 };
+
+export interface InitialSecret {
+  name: string;
+  description: string;
+  value: string;
+}
+
+export interface InitialSecretsData {
+  /** The single master secret the user must back up. Null in dev mode. */
+  masterSecret: string | null;
+  /** All derived sub-keys (shown for reference). */
+  secrets: InitialSecret[];
+}
+
+export const setupApi = {
+  getInitialSecrets: () =>
+    apiClient.get<ApiResponse<InitialSecretsData>>('/setup/initial-secrets'),
+};

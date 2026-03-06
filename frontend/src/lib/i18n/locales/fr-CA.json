@@ -663,6 +663,20 @@
       "setupRequired": "La configuration du foyer est requise."
     }
   },
+  "setup": {
+    "secretsModal": {
+      "title": "Sauvegardez Vos Secrets d'Application",
+      "subtitle": "Générés lors de la première configuration — ne seront plus affichés.",
+      "warning": "Votre secret maître est le seul moyen de récupérer votre application après un sinistre. Si vous le perdez et devez restaurer à partir d'une sauvegarde, vous ne pourrez pas déchiffrer vos données. Sauvegardez-le maintenant dans un gestionnaire de mots de passe ou un stockage chiffré.",
+      "masterSecretLabel": "Secret Maître",
+      "masterSecretDesc": "Cette seule valeur est tout ce que vous devez stocker. Tous les autres secrets en sont dérivés et peuvent être régénérés à tout moment avec le script de récupération.",
+      "derivedSecretsLabel": "Secrets dérivés (pour référence — vous n'avez pas besoin de les stocker séparément)",
+      "allSecretsLabel": "Tous les secrets",
+      "whereToStore": "Recommandé : un gestionnaire de mots de passe (Bitwarden, 1Password, etc.), une clé USB chiffrée, ou imprimé et conservé dans un endroit physiquement sécurisé. Ne sauvegardez jamais cette valeur en texte clair sur la même machine que l'application.",
+      "confirmLabel": "J'ai sauvegardé le secret maître dans un endroit sécurisé.",
+      "continueBtn": "Continuer vers l'inscription"
+    }
+  },
   "simplefin": {
     "title": "Intégration SimpleFIN",
     "subtitle": "Importez automatiquement les transactions de vos comptes bancaires.",

@@ -663,6 +663,20 @@
       "setupRequired": "Household setup is required."
     }
   },
+  "setup": {
+    "secretsModal": {
+      "title": "Save Your Application Secrets",
+      "subtitle": "Generated on first setup — will not be shown again.",
+      "warning": "Your master secret is the only way to recover your application after a disaster. If you lose it and need to restore from backup, you will not be able to decrypt your data. Save it now in a password manager or encrypted storage.",
+      "masterSecretLabel": "Master Secret",
+      "masterSecretDesc": "This single value is all you need to store. All other secrets are derived from it and can be regenerated at any time using the recovery script.",
+      "derivedSecretsLabel": "Derived secrets (for reference — you do not need to store these separately)",
+      "allSecretsLabel": "All secrets",
+      "whereToStore": "Recommended: a password manager (Bitwarden, 1Password, etc.), an encrypted USB drive, or printed and stored in a physically secure location. Never save this in plain text on the same machine as the application.",
+      "confirmLabel": "I have saved the master secret in a secure location.",
+      "continueBtn": "Continue to Registration"
+    }
+  },
   "simplefin": {
     "title": "SimpleFIN Integration",
     "subtitle": "Automatically import transactions from your bank accounts.",

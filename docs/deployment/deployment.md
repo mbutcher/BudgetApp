@@ -1,401 +1,156 @@
-# Production Deployment Guide
+# BudgetApp — Installation Guide
 
-> **Target platform**: Unraid (Docker Compose). The same steps apply to any Linux host with Docker Engine 24+ and Docker Compose v2.
-
----
-
-## 1. Prerequisites
-
-### Host Requirements
-
-| Resource | Minimum | Recommended |
-|----------|---------|-------------|
-| RAM | 2 GB | 4 GB |
-| Disk (app data) | 10 GB | 20 GB+ |
-| OS | Unraid 6.12+ / Ubuntu 22.04 | Unraid 7.x |
-
-### Required Software
-
-- **Docker Engine** 24+ with Docker Compose v2 (`docker compose` command)
-  - Unraid: install the **Docker** and **Community Applications** plugins
-- **Git** — to clone the repository
-- **A domain name** (or local LAN hostname) with SSL certificate
-  - Recommended: [Let's Encrypt](https://letsencrypt.org/) via ACME + Nginx Proxy Manager, or Unraid's built-in reverse proxy
-
-### Ports Required
-
-| Service | Port | Note |
-|---------|------|------|
-| Nginx | 80, 443 | Public-facing (HTTP redirect + HTTPS) |
-| Backend | 127.0.0.1:3001 | Loopback only — not exposed externally |
-| MariaDB | (internal) | Private Docker network only |
-| Redis | (internal) | Private Docker network only |
+> **Who this is for:** Unraid users comfortable with the Terminal and Community Applications. No programming knowledge required.
 
 ---
 
-## 2. Clone the Repository
+## What You'll Need Before Starting
+
+- **Unraid 6.12 or newer**
+- **Nginx Proxy Manager** installed from Community Applications (for access outside your home network)
+- A domain name pointed at your home IP, or a local hostname like `budget.lan`
+
+---
+
+## 1. Install BudgetApp
+
+Open an Unraid Terminal and run these three commands:
 
 ```bash
 git clone <repository-url> /mnt/user/repos/BudgetApp
 cd /mnt/user/repos/BudgetApp
+./scripts/setup/setup-prod.sh
 ```
 
-On Unraid you can store the repo anywhere readable by Docker. `/mnt/user/repos/` is a common convention.
+The setup script will ask for your domain name, then do everything else automatically — generating your security keys, creating all the necessary folders, and starting the app.
+
+When it finishes, BudgetApp will be running on port **3000**.
+
+> **Optional:** Pass your domain name directly to skip the prompt:
+> ```bash
+> ./scripts/setup/setup-prod.sh --domain budget.yourdomain.com
+> ```
 
 ---
 
-## 3. Generate Production Secrets
+## 2. Save Your Master Secret
 
-Run the key-generation script, passing `production` as the environment:
+The first time you open BudgetApp in a browser, you will see a screen asking you to save your **Master Secret** before you can create an account.
+
+**This is the single most important step.** Your Master Secret is a long string of letters and numbers that protects all of your data. If you ever need to move BudgetApp to a new server, this is what you'll need to restore it.
+
+1. Click **Copy** to copy the Master Secret to your clipboard.
+2. Paste it into a password manager (1Password, Bitwarden, etc.) or write it down and store it somewhere safe.
+3. Check the confirmation box and click **Continue** to proceed to account creation.
+
+Once you dismiss this screen, the secret will never be shown again.
+
+---
+
+## 3. Set Up Nginx Proxy Manager (for external access)
+
+If you want to access BudgetApp from outside your home network with a real domain name and HTTPS, configure a Proxy Host in Nginx Proxy Manager:
+
+1. Open Nginx Proxy Manager and go to **Proxy Hosts → Add Proxy Host**.
+2. Fill in the **Details** tab:
+   - **Domain Names:** `budget.yourdomain.com`
+   - **Forward Hostname / IP:** the IP address of your Unraid server
+   - **Forward Port:** `3000`
+   - Turn on **Websockets Support**
+3. On the **SSL** tab:
+   - Select **Request a new SSL Certificate**
+   - Turn on **Force SSL**
+4. On the **Advanced** tab, paste this into the custom Nginx configuration box:
+
+```nginx
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-Real-IP $remote_addr;
+```
+
+5. Click **Save**.
+
+BudgetApp is now accessible at `https://budget.yourdomain.com`.
+
+---
+
+## 4. Backup
+
+BudgetApp stores all of its data in two places. Back up both regularly.
+
+| What | Where on your Unraid server |
+|------|-----------------------------|
+| All app data (database, sessions, uploads) | `/mnt/user/appdata/budget-app/` |
+| Master Secret | `secrets/production/master_secret.txt` (inside the BudgetApp repo folder) |
+
+**The Master Secret file is tiny but critical.** Copy it somewhere off-server (a password manager, an encrypted USB drive, a second location). You can rebuild everything else from it.
+
+For the app data folder, use Unraid's built-in backup tools or the **CA Backup / Restore** plugin to schedule regular copies to a share or external drive.
+
+---
+
+## 5. Upgrade
 
 ```bash
-./scripts/setup/generate-keys.sh production
+cd /mnt/user/repos/BudgetApp
+git pull
+docker compose -f docker/docker-compose.prod.yml down
+docker compose -f docker/docker-compose.prod.yml up -d --build
 ```
 
-This creates files under `secrets/production/`:
-
-| File | Description |
-|------|-------------|
-| `db_password.txt` | MariaDB application user password |
-| `db_root_password.txt` | MariaDB root password |
-| `db_encryption_key.txt` | MariaDB InnoDB file-key-management key |
-| `jwt_secret.txt` | JWT signing secret (HMAC-SHA256) |
-| `encryption_key.txt` | AES-256-GCM master key for field-level encryption |
-| `password_pepper.txt` | Argon2id pepper for password hashing |
-| `redis_password.txt` | Redis `requirepass` password |
-
-**Never commit these files to version control.** The `secrets/` directory is git-ignored.
-
-Store a secure backup of `secrets/production/` somewhere outside the repository (e.g., an encrypted password manager or an encrypted USB drive).
+Any database updates are applied automatically when the app starts back up.
 
 ---
 
-## 4. Configure `secrets/production/.env`
+## 6. Restore / Disaster Recovery
 
-Copy the example file and fill in the required values:
+### Moving to a new server (or rebuilding after a failure)
+
+1. Install Docker and Docker Compose on the new server.
+2. Clone the BudgetApp repository to the same path.
+3. Copy your backed-up `/mnt/user/appdata/budget-app/` folder to the new server.
+4. Restore your security keys from your Master Secret:
 
 ```bash
-cp secrets/.env.example secrets/production/.env
+cd /mnt/user/repos/BudgetApp
+./scripts/setup/derive-secrets.sh YOUR-MASTER-SECRET-HERE
 ```
 
-Edit `secrets/production/.env`:
-
-```env
-# ── Application ───────────────────────────────────────────────────────────────
-NODE_ENV=production
-APP_PORT=3001
-# The public URL users access — used for WebAuthn RP origin and CORS
-APP_URL=https://budget.yourdomain.com
-
-# ── Database ──────────────────────────────────────────────────────────────────
-DB_HOST=mariadb          # Docker service name — do not change
-DB_PORT=3306
-DB_NAME=budget_app
-DB_USER=budget_user
-# DB_PASSWORD is loaded from secrets/production/db_password.txt
-
-# ── Redis ─────────────────────────────────────────────────────────────────────
-REDIS_HOST=redis         # Docker service name — do not change
-REDIS_PORT=6379
-# REDIS_PASSWORD is loaded from secrets/production/redis_password.txt
-
-# ── JWT ───────────────────────────────────────────────────────────────────────
-JWT_EXPIRY=15m
-JWT_REFRESH_EXPIRY=30d
-# JWT_SECRET is loaded from secrets/production/jwt_secret.txt
-
-# ── Encryption ────────────────────────────────────────────────────────────────
-ENCRYPTION_ALGORITHM=aes-256-gcm
-# ENCRYPTION_KEY is loaded from secrets/production/encryption_key.txt
-# PASSWORD_PEPPER is loaded from secrets/production/password_pepper.txt
-
-# ── CORS ──────────────────────────────────────────────────────────────────────
-# Must match APP_URL exactly (no trailing slash)
-CORS_ORIGIN=https://budget.yourdomain.com
-
-# ── WebAuthn (Passkeys) ───────────────────────────────────────────────────────
-WEBAUTHN_RP_NAME=Budget App
-# RP_ID must be the effective domain (no protocol, no port, no path)
-WEBAUTHN_RP_ID=budget.yourdomain.com
-WEBAUTHN_ORIGIN=https://budget.yourdomain.com
-
-# ── Logging ───────────────────────────────────────────────────────────────────
-LOG_LEVEL=info
-LOG_DIR=/app/logs
-
-# ── Rate Limiting ─────────────────────────────────────────────────────────────
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX_REQUESTS=100
-LOGIN_RATE_LIMIT_MAX=5
-LOGIN_RATE_LIMIT_WINDOW_MS=900000
-
-# ── SimpleFIN (optional) ─────────────────────────────────────────────────────
-SIMPLEFIN_API_URL=https://bridge.simplefin.org
-```
-
----
-
-## 5. Prepare Data Directories
-
-The production Compose file expects these paths to exist on the host:
-
-```bash
-mkdir -p /mnt/user/appdata/budget-app/mariadb/data
-mkdir -p /mnt/user/appdata/budget-app/mariadb/backups
-mkdir -p /mnt/user/appdata/budget-app/mariadb/keys
-mkdir -p /mnt/user/appdata/budget-app/redis/data
-mkdir -p /mnt/user/appdata/budget-app/logs/nginx
-mkdir -p /mnt/user/appdata/budget-app/logs/backend
-mkdir -p /mnt/user/appdata/budget-app/ssl
-mkdir -p /mnt/user/appdata/budget-app/uploads
-```
-
----
-
-## 6. SSL Certificate
-
-Place your SSL certificate and private key in `/mnt/user/appdata/budget-app/ssl/`:
-
-```
-/mnt/user/appdata/budget-app/ssl/
-  cert.pem      ← Full chain certificate
-  key.pem       ← Private key
-```
-
-### Option A — Nginx Proxy Manager (Recommended for Unraid)
-
-1. Install **Nginx Proxy Manager** from Unraid Community Applications.
-2. In NPM, create a new **Proxy Host** pointing to `budget_nginx:443` (or use NPM itself as the TLS termination point and proxy to `budget_backend:3001` and `budget_frontend:80`).
-3. Use the NPM Let's Encrypt integration to auto-provision and renew certificates.
-
-When using NPM as the outer proxy, you can remove the Nginx container from the BudgetApp Compose file and expose backend on port 3001 and frontend on port 3000 directly (still LAN-only).
-
-### Option B — Self-Signed (LAN only)
-
-```bash
-openssl req -x509 -nodes -days 365 -newkey rsa:4096 \
-  -keyout /mnt/user/appdata/budget-app/ssl/key.pem \
-  -out /mnt/user/appdata/budget-app/ssl/cert.pem \
-  -subj "/CN=budget.lan"
-```
-
-### Required Proxy Headers
-
-If you are using an external reverse proxy (Nginx Proxy Manager, Traefik, etc.), ensure these headers are forwarded to the backend:
-
-```
-X-Forwarded-For: <client-ip>
-X-Forwarded-Proto: https
-X-Real-IP: <client-ip>
-Host: budget.yourdomain.com
-```
-
----
-
-## 7. Start the Stack
-
-From the repository root:
+5. Start the app:
 
 ```bash
 docker compose -f docker/docker-compose.prod.yml up -d --build
 ```
 
-`--build` compiles fresh images from your local source on first run. Subsequent starts do not need `--build` unless you have pulled new code.
+Your data and settings will be exactly as you left them.
 
-Check that all containers are healthy:
+---
+
+## Troubleshooting
+
+### The app won't start
+
+```bash
+docker compose -f docker/docker-compose.prod.yml logs
+```
+
+Check the output for error messages. Common causes:
+
+- **Missing secret files** — run `./scripts/setup/setup-prod.sh` again from the repo folder.
+- **Port 3000 already in use** — another container is using that port. Change the port by editing `FRONTEND_PORT` in `secrets/production/.env`, then restart.
+
+### The app starts but I can't log in / WebAuthn errors
+
+Make sure your domain name in Nginx Proxy Manager exactly matches the domain you used during setup. Mismatched hostnames will prevent passkey and security features from working.
+
+### Check whether the app is running
 
 ```bash
 docker compose -f docker/docker-compose.prod.yml ps
 ```
 
-Expected output:
+All four services (`budget_frontend`, `budget_backend`, `budget_mariadb`, `budget_redis`) should show **Up**.
 
-```
-NAME               STATUS                 PORTS
-budget_nginx       Up                     0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp
-budget_frontend    Up
-budget_backend     Up (healthy)           127.0.0.1:3001->3001/tcp
-budget_mariadb     Up (healthy)
-budget_redis       Up (healthy)
-```
+### SSL certificate problems
 
----
-
-## 8. First Run — Migrations
-
-The backend container automatically runs pending database migrations at startup before accepting connections. You can confirm by checking the logs:
-
-```bash
-docker logs budget_backend | grep -i migrat
-```
-
-You should see lines like:
-
-```
-[info] Running migrations...
-[info] Migrations complete
-[info] Server listening on :3001
-```
-
-If a migration fails, the container will exit. Check logs for the specific error and fix before restarting.
-
-To run migrations manually:
-
-```bash
-docker exec budget_backend npm run migrate
-```
-
----
-
-## 9. Verify the Deployment
-
-1. Open `https://budget.yourdomain.com` in a browser.
-2. Create your first user account on the registration page.
-3. Check the backend health endpoint:
-
-```bash
-curl -sk https://budget.yourdomain.com/api/v1/health | jq .
-# { "status": "ok" }
-```
-
----
-
-## 10. Backup & Restore
-
-### What to Back Up
-
-All persistent data lives under `/mnt/user/appdata/budget-app/`:
-
-| Path | Contents |
-|------|----------|
-| `mariadb/data/` | All database files (InnoDB tablespaces, logs) |
-| `mariadb/keys/` | InnoDB encryption keyfile |
-| `redis/data/` | Redis AOF (session data) |
-| `logs/` | Application and Nginx logs |
-| `uploads/` | User-uploaded files |
-| `secrets/production/` | All secret files (store separately, encrypted!) |
-
-### Automated MariaDB Dump (Recommended)
-
-A logical dump is more portable than raw InnoDB files:
-
-```bash
-# Create a dated SQL dump (run this on the host)
-docker exec budget_mariadb \
-  sh -c 'mysqldump -u root -p"$(cat /run/secrets/db_root_password)" \
-    --single-transaction --routines --triggers budget_app' \
-  > /mnt/user/appdata/budget-app/mariadb/backups/budget_$(date +%Y%m%d_%H%M%S).sql.gz
-```
-
-Or add it to Unraid's **User Scripts** plugin to run nightly.
-
-### Restore from SQL Dump
-
-```bash
-# Stop the backend to avoid writes during restore
-docker compose -f docker/docker-compose.prod.yml stop backend
-
-# Import the dump
-gunzip -c /path/to/backup.sql.gz | docker exec -i budget_mariadb \
-  sh -c 'mysql -u root -p"$(cat /run/secrets/db_root_password)" budget_app'
-
-# Restart
-docker compose -f docker/docker-compose.prod.yml start backend
-```
-
-### Full Appdata Restore
-
-If restoring to a new host:
-
-1. Copy the backed-up `secrets/production/` to the new location.
-2. Copy `/mnt/user/appdata/budget-app/` to the new host (same path).
-3. Clone the repository at the same version tag.
-4. Run `docker compose -f docker/docker-compose.prod.yml up -d --build`.
-
----
-
-## 11. Upgrading
-
-```bash
-# 1. Pull the latest code
-cd /mnt/user/repos/BudgetApp
-git pull
-
-# 2. Stop the stack (preserves volumes)
-docker compose -f docker/docker-compose.prod.yml down
-
-# 3. Rebuild and start
-docker compose -f docker/docker-compose.prod.yml up -d --build
-```
-
-The backend container runs `npm run migrate` at startup — any new migrations are applied automatically before the API becomes available.
-
----
-
-## 12. Troubleshooting
-
-### View Live Logs
-
-```bash
-# All services
-docker compose -f docker/docker-compose.prod.yml logs -f
-
-# Single service
-docker logs -f budget_backend
-docker logs -f budget_mariadb
-docker logs -f budget_nginx
-```
-
-### Backend Unhealthy / Not Starting
-
-```bash
-docker logs budget_backend | tail -50
-```
-
-Common causes:
-- **Migration failure** — check for SQL errors in the log.
-- **Cannot connect to MariaDB** — MariaDB may still be initializing; the backend retries automatically. If it persists, check `docker logs budget_mariadb`.
-- **Missing secret file** — verify all `secrets/production/*.txt` files exist.
-- **CORS / WebAuthn mismatch** — `APP_URL`, `CORS_ORIGIN`, `WEBAUTHN_ORIGIN`, and `WEBAUTHN_RP_ID` must all match the public hostname.
-
-### Database Access
-
-```bash
-docker exec -it budget_mariadb \
-  sh -c 'mysql -u budget_user -p"$(cat /run/secrets/db_password)" budget_app'
-```
-
-### Redis Access
-
-```bash
-docker exec -it budget_redis \
-  sh -c 'redis-cli -a "$(cat /run/secrets/redis_password)"'
-```
-
-### SSL Issues
-
-- Confirm `cert.pem` and `key.pem` exist in `/mnt/user/appdata/budget-app/ssl/`.
-- The cert must include the full chain (server cert + intermediates).
-- Reload Nginx after replacing certs:
-
-```bash
-docker exec budget_nginx nginx -s reload
-```
-
-### Reset a Stuck Migration
-
-```bash
-# Roll back the last migration
-docker exec budget_backend npm run migrate:rollback
-
-# Apply again
-docker exec budget_backend npm run migrate
-```
-
-### Wipe and Redeploy (Destructive)
-
-```bash
-# Remove containers AND volumes (all data lost)
-docker compose -f docker/docker-compose.prod.yml down -v
-docker compose -f docker/docker-compose.prod.yml up -d --build
-```
+SSL is managed entirely by Nginx Proxy Manager. If you're seeing certificate errors, check the certificate status in NPM's admin panel. Make sure the proxy host is forwarding to `http://` (not `https://`) — NPM handles the secure connection on its side.

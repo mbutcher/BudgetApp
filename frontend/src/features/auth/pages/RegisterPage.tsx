@@ -1,9 +1,31 @@
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { RegisterForm } from '../components/RegisterForm';
+import { InitialSecretsModal } from '../components/InitialSecretsModal';
+import { setupApi } from '../api/authApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@components/ui/card';
 
 export function RegisterPage() {
   const { t } = useTranslation();
+  const [secretsAcknowledged, setSecretsAcknowledged] = useState(false);
+
+  // Check whether initial secrets exist (first-run only). The backend returns 410
+  // once a user has registered, so this query will silently fail in normal operation.
+  const { data: secretsData } = useQuery({
+    queryKey: ['setup', 'initial-secrets'],
+    queryFn: async () => {
+      const res = await setupApi.getInitialSecrets();
+      return res.data.data;
+    },
+    staleTime: Infinity,
+    retry: false,
+  });
+
+  const hasSecrets = Boolean(
+    secretsData && (secretsData.masterSecret || secretsData.secrets.length > 0)
+  );
+  const showSecretsModal = hasSecrets && !secretsAcknowledged;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
@@ -22,6 +44,11 @@ export function RegisterPage() {
           </CardContent>
         </Card>
       </div>
+
+      <InitialSecretsModal
+        open={showSecretsModal}
+        onAcknowledged={() => setSecretsAcknowledged(true)}
+      />
     </div>
   );
 }

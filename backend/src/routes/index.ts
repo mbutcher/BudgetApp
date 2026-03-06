@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { apiRateLimiter } from '@middleware/rateLimiter';
 import authRoutes from './authRoutes';
+import setupRoutes from './setupRoutes';
 import accountRoutes from './accountRoutes';
 import categoryRoutes from './categoryRoutes';
 import transactionRoutes from './transactionRoutes';
@@ -24,6 +25,7 @@ const router = Router();
 router.use(apiRateLimiter);
 
 // Feature routers
+router.use('/setup', setupRoutes);
 router.use('/auth', authRoutes);
 router.use('/accounts', accountRoutes);
 router.use('/categories', categoryRoutes);

@@ -1,28 +1,11 @@
 version: '3.8'
 
-services:
-  # Nginx Reverse Proxy with SSL
-  nginx:
-    build:
-      context: ./nginx
-      dockerfile: Dockerfile
-    container_name: budget_nginx
-    restart: unless-stopped
-    ports:
-      - "443:443"
-      - "80:80"
-    volumes:
-      - /mnt/user/appdata/budget-app/ssl:/etc/nginx/ssl:ro
-      - /mnt/user/appdata/budget-app/logs/nginx:/var/log/nginx
-    depends_on:
-      - backend
-      - frontend
-    networks:
-      - budget_public
-    environment:
-      - TZ=America/New_York
+# SSL and external routing are handled by Nginx Proxy Manager (or any reverse proxy).
+# Point your proxy at http://<host>:${FRONTEND_PORT:-3000} — the frontend nginx
+# serves static files and proxies /api/v1 requests to the backend internally.
 
-  # Frontend (React Production Build)
+services:
+  # Frontend (React Production Build + internal API proxy)
   frontend:
     build:
       context: ../frontend
@@ -32,8 +15,10 @@ services:
         - VITE_API_URL=/api/v1
     container_name: budget_frontend
     restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
     networks:
-      - budget_public
+      - budget_app
     environment:
       - NODE_ENV=production
 
@@ -46,8 +31,6 @@ services:
         - NODE_ENV=production
     container_name: budget_backend
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:3001:3001"  # Only accessible via nginx
     volumes:
       - /mnt/user/appdata/budget-app/logs/backend:/app/logs
       - /mnt/user/appdata/budget-app/uploads:/app/uploads
@@ -71,8 +54,8 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - budget_private
-      - budget_public
+      - budget_app
+      - budget_data
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
       interval: 30s
@@ -97,7 +80,7 @@ services:
       - db_root_password
       - db_encryption_key
     networks:
-      - budget_private
+      - budget_data
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -126,7 +109,7 @@ services:
     secrets:
       - redis_password
     networks:
-      - budget_private
+      - budget_data
     command: sh -c 'redis-server /usr/local/etc/redis/redis.conf --requirepass "$$(cat /run/secrets/redis_password)"'
     healthcheck:
       test: ["CMD", "sh", "-c", "redis-cli -a $$(cat /run/secrets/redis_password) ping"]
@@ -135,13 +118,13 @@ services:
       retries: 5
 
 networks:
-  budget_public:
+  budget_app:
     driver: bridge
-    name: budget_public_network
-  budget_private:
+    name: budget_app_network
+  budget_data:
     driver: bridge
-    name: budget_private_network
-    internal: true  # No external access
+    name: budget_data_network
+    internal: true  # No external access — DB/Redis only reachable from backend
 
 secrets:
   db_password:
@@ -158,9 +141,3 @@ secrets:
     file: ../secrets/production/password_pepper.txt
   redis_password:
     file: ../secrets/production/redis_password.txt
-
-volumes:
-  mariadb_data:
-    name: budget_mariadb_data
-  redis_data:
-    name: budget_redis_data
