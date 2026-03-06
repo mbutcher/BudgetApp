@@ -97,11 +97,7 @@ export function InitialSecretsModal({ open, onAcknowledged }: InitialSecretsModa
 
   return (
     <Dialog open={open} onOpenChange={() => undefined}>
-      <DialogContent
-        className="max-h-[90vh] max-w-xl overflow-y-auto"
-        onInteractOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
-      >
+      <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
         {/* ── Header ── */}
         <DialogHeader>
           <div className="mb-3 flex items-start gap-3">
