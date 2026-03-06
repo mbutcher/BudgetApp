@@ -1,5 +1,7 @@
 # BudgetApp — Installation Guide
 
+**Also available in:** [Français](deployment.fr-CA.md)
+
 > **Who this is for:** Unraid users comfortable with the Terminal and Community Applications. No programming knowledge required.
 
 ---
