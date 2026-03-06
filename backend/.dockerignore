@@ -73,6 +73,5 @@ temp/
 # Other
 .prettierrc*
 .eslintrc*
-tsconfig.json
 jest.config.*
 nodemon.json
