@@ -19,7 +19,7 @@
 Ouvrez un Terminal Unraid et exécutez ces trois commandes :
 
 ```bash
-git clone <repository-url> /mnt/user/repos/BudgetApp
+git clone https://github.com/mbutcher/BudgetApp /mnt/user/repos/BudgetApp
 cd /mnt/user/repos/BudgetApp
 ./scripts/setup/setup-prod.sh
 ```
