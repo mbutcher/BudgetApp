@@ -87,10 +87,7 @@ services:
       - --plugin-load-add=file_key_management
       - --file-key-management-filename=/etc/mysql/encryption/keyfile.enc
       - --innodb-encrypt-tables=ON
-      - --innodb-encrypt-log=ON
       - --innodb-encryption-threads=4
-      - --encrypt-tmp-disk-tables=ON
-      - --encrypt-tmp-files=ON
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
