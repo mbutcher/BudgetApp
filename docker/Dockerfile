@@ -51,6 +51,10 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --from=backend-builder /app/dist ./dist
 
+# docs/api is read at startup by buildSwaggerSpec (openapi.yaml + paths/*.yaml).
+# swagger.ts resolves __dirname('../../../docs/api') → /docs/api in the compiled image.
+COPY docs/ /docs/
+
 RUN mkdir -p /app/logs /app/uploads
 
 # ── supervisord ──
