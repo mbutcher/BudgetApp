@@ -10,17 +10,22 @@
 
 - **Unraid 6.12 or newer**
 - **Docker Compose Manager** installed from Community Applications (search "Docker Compose Manager" by dcflachs)
-- **MariaDB** installed from Community Applications — BudgetApp uses this as its database
 - **Nginx Proxy Manager** installed from Community Applications (for access outside your home network)
 - A domain name pointed at your home IP, or a local hostname like `budget.lan`
 
+> **Database:** BudgetApp includes SQLite by default — no separate database server is required. If you prefer MariaDB or PostgreSQL, see Step 1b below.
+
 ---
 
-## 1. Prepare Your Database
+## 1. Choose Your Database
 
-BudgetApp stores your data in a MariaDB database that you manage. If you don't already have MariaDB installed, install it from Community Applications first.
+### Option A — SQLite (default, recommended)
 
-Once MariaDB is running, open a terminal and connect to it (or use Adminer), then run:
+No action needed. BudgetApp stores its data in a single file at `/mnt/user/appdata/budget-app/data/budget.db` on your server. Skip ahead to **Step 2**.
+
+### Option B — MariaDB (external)
+
+Install MariaDB from Community Applications if you don't already have it. Once running, open a terminal and connect to it (or use Adminer), then run:
 
 ```sql
 CREATE DATABASE IF NOT EXISTS budget_app
@@ -31,7 +36,19 @@ GRANT ALL PRIVILEGES ON budget_app.* TO 'budget_user'@'%';
 FLUSH PRIVILEGES;
 ```
 
-Write down the password you chose — the setup script will ask for it.
+Write down the password you chose — you'll need it during setup.
+
+### Option C — PostgreSQL (external)
+
+If you prefer PostgreSQL, connect to your server and run:
+
+```sql
+CREATE DATABASE budget_app;
+CREATE USER budget_user WITH PASSWORD 'choose_a_strong_password';
+GRANT ALL PRIVILEGES ON DATABASE budget_app TO budget_user;
+```
+
+Write down the password — you'll need it during setup.
 
 ---
 
@@ -47,7 +64,7 @@ cd /mnt/user/repos/BudgetApp
 
 The setup script will ask for:
 - Your domain name (e.g. `budget.yourdomain.com`)
-- Your MariaDB server address and the database credentials you created above
+- Your database choice and credentials (if using MariaDB or PostgreSQL)
 
 It will then generate your security keys, create the necessary folders, and start the app.
 
@@ -109,11 +126,37 @@ BudgetApp stores data in two places. Back up both regularly.
 |------|-------|
 | Uploaded files and logs | `/mnt/user/appdata/budget-app/` |
 | Master Secret | `secrets/production/master_secret.txt` (inside the BudgetApp repo folder) |
-| Database | Managed by your MariaDB container — back up via your MariaDB backup process |
+| Database | See below — depends on your database choice |
 
 **The Master Secret file is tiny but critical.** Copy it somewhere off-server (a password manager, an encrypted USB drive, a second location). You can rebuild everything else from it.
 
 For the app data folder, use Unraid's built-in backup tools or the **CA Backup / Restore** plugin to schedule regular copies to a share or external drive.
+
+### Database backups
+
+**SQLite (default):** The database is a single file. Back it up with CA Backup / Restore (include `/mnt/user/appdata/budget-app/data/`), or copy it manually:
+
+```bash
+cp /mnt/user/appdata/budget-app/data/budget.db \
+   /mnt/user/backups/budget_$(date +%Y%m%d).db
+```
+
+**MariaDB:** Use your existing MariaDB backup process, or add a nightly script in User Scripts:
+
+```bash
+docker exec <your-mariadb-container> \
+  sh -c 'mysqldump -u budget_user -p"your_db_password" \
+    --single-transaction budget_app' \
+  | gzip > /mnt/user/backups/budget_$(date +%Y%m%d).sql.gz
+```
+
+**PostgreSQL:** Similarly, add a nightly User Scripts entry:
+
+```bash
+docker exec <your-postgres-container> \
+  pg_dump -U budget_user budget_app \
+  | gzip > /mnt/user/backups/budget_$(date +%Y%m%d).sql.gz
+```
 
 ---
 
@@ -134,22 +177,43 @@ Any database updates are applied automatically when the app starts back up.
 
 ### Moving to a new server (or rebuilding after a failure)
 
-1. Install Docker, Docker Compose Manager, and MariaDB on the new server.
+1. Install Docker and Docker Compose Manager on the new server.
 2. Clone the BudgetApp repository to the same path.
-3. Restore your MariaDB database backup to your MariaDB instance.
-4. Restore your security keys from your Master Secret:
+3. Restore your security keys from your Master Secret:
 
 ```bash
 cd /mnt/user/repos/BudgetApp
 ./scripts/setup/derive-secrets.sh YOUR-MASTER-SECRET-HERE
 ```
 
-5. Manually create the database password secret file with the password you used for `budget_user`:
+4. Restore your database:
 
-```bash
-printf '%s' 'your_db_password' > secrets/production/db_password.txt
-chmod 600 secrets/production/db_password.txt
-```
+   **SQLite:** Copy your backup file back into place:
+   ```bash
+   mkdir -p /mnt/user/appdata/budget-app/data
+   cp /mnt/user/backups/budget_YYYYMMDD.db \
+      /mnt/user/appdata/budget-app/data/budget.db
+   ```
+
+   **MariaDB:** Recreate the database user (see Step 1 above), restore the dump, then create the password secret file:
+   ```bash
+   gunzip -c /mnt/user/backups/budget_YYYYMMDD.sql.gz \
+     | docker exec -i <your-mariadb-container> \
+       mysql -u budget_user -p budget_app
+   printf '%s' 'your_db_password' > secrets/production/db_password.txt
+   chmod 600 secrets/production/db_password.txt
+   ```
+
+   **PostgreSQL:** Similarly, restore the dump and create the password secret file:
+   ```bash
+   gunzip -c /mnt/user/backups/budget_YYYYMMDD.sql.gz \
+     | docker exec -i <your-postgres-container> \
+       psql -U budget_user -d budget_app
+   printf '%s' 'your_db_password' > secrets/production/db_password.txt
+   chmod 600 secrets/production/db_password.txt
+   ```
+
+5. Copy `secrets/production/.env` from your backup (or recreate it — see Step 1 of the [User Deployment Guide](user-guide.md)).
 
 6. Start the app:
 
@@ -171,7 +235,8 @@ docker compose -f docker/docker-compose.prod.yml logs
 
 Check the output for error messages. Common causes:
 
-- **Can't connect to database** — verify the MariaDB host address and credentials in `secrets/production/.env`. Make sure the MariaDB container is running.
+- **SQLite permission error** — verify the `/mnt/user/appdata/budget-app/data/` directory exists and is writable. Check it appears in the volumes section of `docker/docker-compose.prod.yml`.
+- **Can't connect to external database** — if using `DB_CLIENT=mysql2` or `DB_CLIENT=pg`, verify the host address, port, and credentials in `secrets/production/.env`. Make sure the database container is running and the `budget_app` database exists.
 - **Missing secret files** — run `./scripts/setup/setup-prod.sh` again from the repo folder.
 - **Port 13911 already in use** — another container is using that port. Change it by editing `APP_PORT` in `secrets/production/.env`, then restart.
 
