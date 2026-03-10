@@ -34,9 +34,12 @@ We need to select a technology stack for a self-hosted personal budgeting applic
 - **.NET Core**: Excellent but heavier Docker images and less familiar to team
 
 ### Database
-**MariaDB 11 with InnoDB Encryption**
+**MariaDB 11 with InnoDB Encryption** *(original decision — see amendment below)*
 
-**Rationale:**
+> **Amended by [ADR-003](./adr-003-database-platform-agnosticism.md) (2026-03-09):**
+> The app now supports SQLite 3 (default), MariaDB 11, and PostgreSQL 16, selected via the `DB_CLIENT` environment variable. SQLite is the default for zero-config self-hosting. MariaDB and PostgreSQL remain supported for users with existing infrastructure. See ADR-003 for full rationale and implementation details.
+
+**Original Rationale:**
 - ACID compliance critical for financial data
 - Built-in transparent table encryption (InnoDB encryption)
 - Excellent performance for transactional workloads
@@ -44,10 +47,10 @@ We need to select a technology stack for a self-hosted personal budgeting applic
 - Open source with active development
 - Lower resource usage than PostgreSQL on Unraid
 
-**Alternatives Considered:**
+**Alternatives Considered (at time of original decision):**
 - **PostgreSQL**: More features (better JSON support) but higher resource usage
 - **MongoDB**: Not suitable for financial transactions requiring ACID guarantees
-- **SQLite**: Not suitable for multi-user future or concurrent access
+- **SQLite**: Ruled out for multi-user concurrent writes — reconsidered in ADR-003
 
 ### Caching/Sessions
 **Redis**

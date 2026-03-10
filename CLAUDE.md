@@ -11,7 +11,7 @@ BudgetApp is a secure, self-hosted personal budgeting application. Key features 
 ### Backend (`/backend`)
 - **Runtime:** Node.js 20, TypeScript 5.5
 - **Framework:** Express.js 4.19
-- **Database:** MariaDB 11 (InnoDB encryption), migrations via Knex.js
+- **Database:** SQLite 3 (default) · MariaDB 11 · PostgreSQL 16 — selected via `DB_CLIENT` env var; migrations via Knex.js
 - **Cache/Sessions:** Redis 7
 - **Auth:** Argon2id passwords, JWT dual-token (15m access / 30d refresh), TOTP 2FA, WebAuthn/Passkeys
 - **Encryption:** AES-256-GCM field-level encryption
@@ -102,7 +102,7 @@ docker compose -f docker/docker-compose.prod.yml down
 
 ### Backend Layers
 ```
-Controllers → Services → Repositories → Database (Knex/MariaDB)
+Controllers → Services → Repositories → Database (Knex: SQLite / MariaDB / PostgreSQL)
 ```
 - `src/controllers/` — Request handling
 - `src/services/` — Business logic (auth, encryption, budget, debt, transaction)

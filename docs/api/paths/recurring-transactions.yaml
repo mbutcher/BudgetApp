@@ -1,3 +1,8 @@
+# DEPRECATED: Recurring Transactions were removed in v0.3.
+# Budget Lines (see budget-lines.yaml) cover all forecasting use cases.
+# The recurring_transactions table has been dropped and all related code removed.
+# This file is retained for historical reference only and should not be served by the API.
+
 components:
   schemas:
     RecurringTransaction:

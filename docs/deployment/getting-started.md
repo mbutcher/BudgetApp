@@ -69,46 +69,52 @@ This will:
 Check that all services are running:
 
 ```bash
-docker-compose -f docker/docker-compose.dev.yml ps
+docker compose -f docker/docker-compose.dev.yml ps
 ```
 
-You should see:
+You should see (default SQLite configuration):
 - `budget_backend_dev` (running)
 - `budget_frontend_dev` (running)
-- `budget_mariadb_dev` (running)
-- `budget_redis_dev` (running)
+
+Optional database containers are started via Docker Compose profiles (see [Database Management](#database-management)).
 
 ### 5. Access the Application
 
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:3001
 - **API Documentation**: http://localhost:3001/api-docs (Swagger UI)
-- **MariaDB**: localhost:3306 (user: `budget_user`, password: see `secrets/development/db_password.txt`)
-- **Redis**: localhost:6379
 
 ## Development Workflow
 
 ### Starting the Development Environment
 
 ```bash
-# Start all containers
-docker-compose -f docker/docker-compose.dev.yml up -d
+# Start default services (backend + frontend, SQLite)
+docker compose -f docker/docker-compose.dev.yml up -d
+
+# Start with MariaDB instead of SQLite
+docker compose -f docker/docker-compose.dev.yml --profile mariadb up -d
+# (also set DB_CLIENT=mysql2 in secrets/development/.env)
+
+# Start with PostgreSQL instead of SQLite
+docker compose -f docker/docker-compose.dev.yml --profile postgres up -d
+# (also set DB_CLIENT=pg in secrets/development/.env)
 
 # View logs
-docker-compose -f docker/docker-compose.dev.yml logs -f
+docker compose -f docker/docker-compose.dev.yml logs -f
 
 # View specific service logs
-docker-compose -f docker/docker-compose.dev.yml logs -f backend
+docker compose -f docker/docker-compose.dev.yml logs -f backend
 ```
 
 ### Stopping the Development Environment
 
 ```bash
 # Stop all containers
-docker-compose -f docker/docker-compose.dev.yml down
+docker compose -f docker/docker-compose.dev.yml down
 
 # Stop and remove volumes (fresh start)
-docker-compose -f docker/docker-compose.dev.yml down -v
+docker compose -f docker/docker-compose.dev.yml down -v
 ```
 
 ### Hot Reload
@@ -145,34 +151,46 @@ npm run dev
 
 ## Database Management
 
+The default development configuration uses **SQLite** (zero-config). Optionally switch to MariaDB or PostgreSQL via Docker Compose profiles (see [Development Workflow](#development-workflow)).
+
 ### Accessing the Database
 
+**SQLite (default):**
 ```bash
-# Via Docker
-docker exec -it budget_mariadb_dev mysql -u budget_user -p budget_app
+# Open SQLite shell inside the backend container
+docker exec -it budget_backend_dev npx knex --knexfile src/database/knexfile.ts sqlite3 /app/data/budget.db
+# Or copy the file out and open with DB Browser for SQLite
+docker cp budget_backend_dev:/app/data/budget.db ./budget.db
+```
 
-# Via local MySQL client
-mysql -h localhost -P 3306 -u budget_user -p budget_app
+**MariaDB (--profile mariadb):**
+```bash
+docker exec -it budget_mariadb_dev mysql -u budget_user -p budget_app
+```
+
+**PostgreSQL (--profile postgres):**
+```bash
+docker exec -it budget_postgres_dev psql -U budget_user -d budget_app
 ```
 
 ### Running Migrations
 
 ```bash
 # Run all pending migrations
-docker-compose -f docker/docker-compose.dev.yml exec backend npm run migrate
+docker compose -f docker/docker-compose.dev.yml exec backend npm run migrate
 
 # Rollback last migration
-docker-compose -f docker/docker-compose.dev.yml exec backend npm run migrate:rollback
+docker compose -f docker/docker-compose.dev.yml exec backend npm run migrate:rollback
 
 # Create new migration
-docker-compose -f docker/docker-compose.dev.yml exec backend npm run migrate:make <migration_name>
+docker compose -f docker/docker-compose.dev.yml exec backend npm run migrate:make <migration_name>
 ```
 
 ### Seeding Data
 
 ```bash
 # Run all seeds
-docker-compose -f docker/docker-compose.dev.yml exec backend npm run seed
+docker compose -f docker/docker-compose.dev.yml exec backend npm run seed
 
 # Reset database and re-seed
 ./scripts/dev/reset-db.sh
@@ -180,12 +198,11 @@ docker-compose -f docker/docker-compose.dev.yml exec backend npm run seed
 
 ### Viewing Database
 
-Use a GUI client like DBeaver:
-- Host: `localhost`
-- Port: `3306`
-- Database: `budget_app`
-- User: `budget_user`
-- Password: (from `secrets/development/db_password.txt`)
+**SQLite**: Use [DB Browser for SQLite](https://sqlitebrowser.org/) — copy `budget.db` out of the container (see above).
+
+**MariaDB/PostgreSQL**: Use a GUI client like DBeaver or TablePlus:
+- MariaDB — Host: `localhost`, Port: `3306`, DB: `budget_app`, User: `budget_user`
+- PostgreSQL — Host: `localhost`, Port: `5432`, DB: `budget_app`, User: `budget_user`
 
 ## Testing
 
@@ -301,15 +318,18 @@ Use browser DevTools:
 
 ### Database Debugging
 
-Enable query logging:
+**SQLite**: Knex query logging is enabled in development mode — check the backend container logs.
+
+**MariaDB**: Enable query logging in the MariaDB console:
 ```sql
--- In MariaDB console
 SET GLOBAL general_log = 'ON';
 SET GLOBAL log_output = 'TABLE';
 
 -- View logs
 SELECT * FROM mysql.general_log ORDER BY event_time DESC LIMIT 100;
 ```
+
+**PostgreSQL**: Enable logging via `postgresql.conf` (`log_statement = 'all'`) or use the `pg_stat_statements` extension.
 
 ## Common Development Tasks
 
@@ -407,10 +427,10 @@ PORT=3002 npm run dev
 
 ```bash
 # Check logs
-docker-compose -f docker/docker-compose.dev.yml logs <service_name>
+docker compose -f docker/docker-compose.dev.yml logs <service_name>
 
 # Rebuild containers
-docker-compose -f docker/docker-compose.dev.yml up -d --build --force-recreate
+docker compose -f docker/docker-compose.dev.yml up -d --build --force-recreate
 
 # Clean Docker system
 docker system prune -a
@@ -418,20 +438,25 @@ docker system prune -a
 
 ### Database Connection Errors
 
-1. Verify MariaDB is running: `docker ps`
-2. Check credentials in `secrets/development/.env`
+1. Verify the correct database container is running (`docker ps`) — MariaDB and PostgreSQL require their profile to be active.
+2. Check `DB_CLIENT` and connection credentials in `secrets/development/.env`.
 3. Verify network connectivity: `docker network ls`
-4. Check database logs: `docker-compose -f docker/docker-compose.dev.yml logs mariadb`
+4. Check database container logs:
+   ```bash
+   docker compose -f docker/docker-compose.dev.yml logs mariadb   # MariaDB
+   docker compose -f docker/docker-compose.dev.yml logs postgres  # PostgreSQL
+   ```
+5. For SQLite issues, verify the `backend_data` named volume exists: `docker volume ls | grep sqlite`
 
 ### Migration Errors
 
 ```bash
 # Check current migration version
-docker-compose -f docker/docker-compose.dev.yml exec backend npm run migrate:status
+docker compose -f docker/docker-compose.dev.yml exec backend npm run migrate:status
 
 # Rollback and retry
-docker-compose -f docker/docker-compose.dev.yml exec backend npm run migrate:rollback
-docker-compose -f docker/docker-compose.dev.yml exec backend npm run migrate
+docker compose -f docker/docker-compose.dev.yml exec backend npm run migrate:rollback
+docker compose -f docker/docker-compose.dev.yml exec backend npm run migrate
 ```
 
 ### Node Module Issues
@@ -447,8 +472,8 @@ npm cache clean --force
 
 ## Next Steps
 
-- Review [Architecture Decisions](../planning/architecture-decisions/) — key technical decision records
-- Explore [Database Schema](../planning/database-schema.md) — full schema reference
+- Review [Architecture Decisions](../developer/architecture-decisions/) — key technical decision records
+- Explore [Database Schema](../developer/database-schema.md) — full schema reference
 
 ## Getting Help
 
