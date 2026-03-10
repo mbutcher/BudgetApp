@@ -64,15 +64,15 @@ cd /mnt/user/repos/BudgetApp
 
 The setup script will ask for:
 - Your domain name (e.g. `budget.yourdomain.com`)
+- Whether you are using Nginx Proxy Manager
+- The host port BudgetApp should listen on (default `13911` — change this if something else is already using it)
 - Your database choice and credentials (if using MariaDB or PostgreSQL)
 
 It will then generate your security keys, create the necessary folders, and start the app.
 
-When it finishes, BudgetApp will be running on port **13911**.
-
-> **Optional:** Pass your domain name directly to skip the prompt:
+> **Optional:** Pass answers directly to skip prompts:
 > ```bash
-> ./scripts/setup/setup-prod.sh --domain budget.yourdomain.com
+> ./scripts/setup/setup-prod.sh --domain budget.yourdomain.com --port 13911
 > ```
 
 ---

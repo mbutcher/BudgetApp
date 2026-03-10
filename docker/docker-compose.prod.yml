@@ -1,5 +1,6 @@
 # Single-container production deployment.
-# MariaDB must be installed separately (e.g. from Unraid Community Applications).
+# Uses SQLite by default (no external database required).
+# For MariaDB or PostgreSQL, set DB_CLIENT in secrets/production/.env.
 # SSL and external routing are handled by Nginx Proxy Manager (or any reverse proxy).
 # Point your proxy at http://<host>:${APP_PORT:-13911}
 

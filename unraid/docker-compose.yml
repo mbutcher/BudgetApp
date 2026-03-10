@@ -1,0 +1,103 @@
+# BudgetApp — Docker Compose Manager template for Unraid
+#
+# HOW TO USE:
+#   1. In Unraid, open the Docker Compose Manager plugin.
+#   2. Click "Add New Stack" and paste this file (or point it at this URL).
+#   3. Fill in the required values marked with  ← CHANGE THIS  below.
+#   4. Run the key generation script in an Unraid Terminal:
+#        cd /mnt/user/repos/BudgetApp
+#        ./scripts/setup/generate-keys.sh production
+#      Then open secrets/production/ and paste each file's contents into the
+#      matching variable below (jwt_secret.txt → JWT_SECRET, etc.).
+#   5. Click "Compose Up".
+#
+# SSL: Configure a Proxy Host in Nginx Proxy Manager pointing at this server's IP
+#      and the port you chose below. Enable SSL + Force SSL there.
+#
+# Upgrading:
+#   cd /mnt/user/repos/BudgetApp && git pull
+#   Then "Compose Up" again in Docker Compose Manager.
+
+services:
+  budget_app:
+    build:
+      context: /mnt/user/repos/BudgetApp
+      dockerfile: docker/Dockerfile
+      args:
+        - VITE_API_URL=/api/v1
+    container_name: budget_app
+    restart: unless-stopped
+
+    ports:
+      - "13911:80"   # ← change 13911 here if that port is already in use on this server
+
+    volumes:
+      - /mnt/user/appdata/budgetapp/data:/app/data
+      - /mnt/user/appdata/budgetapp/logs:/app/logs
+      - /mnt/user/appdata/budgetapp/uploads:/app/uploads
+
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    environment:
+
+      # ── Required: your domain ───────────────────────────────────────────────
+      # Set all three to the same value (your public URL, e.g. https://budget.yourdomain.com).
+      # Use http:// if you are not using Nginx Proxy Manager.
+      APP_URL: "https://budget.yourdomain.com" # ← CHANGE THIS
+      CORS_ORIGIN: "https://budget.yourdomain.com" # ← CHANGE THIS (same as APP_URL)
+      WEBAUTHN_ORIGIN: "https://budget.yourdomain.com" # ← CHANGE THIS (same as APP_URL)
+
+      # Bare hostname only — no protocol, no port.
+      WEBAUTHN_RP_ID: "budget.yourdomain.com"  # ← CHANGE THIS
+
+      # ── Cryptographic secrets ────────────────────────────────────────────────
+      # Run ./scripts/setup/generate-keys.sh production, then copy the values here.
+      # You can find them in secrets/production/ after the script runs.
+      JWT_SECRET: ""                           # ← paste contents of jwt_secret.txt
+      ENCRYPTION_KEY: ""                       # ← paste contents of encryption_key.txt
+      PASSWORD_PEPPER: ""                      # ← paste contents of password_pepper.txt
+
+      # ── Database password ────────────────────────────────────────────────────
+      # SQLite: leave as the placeholder below (no real password needed).
+      # MariaDB / PostgreSQL: paste your database user password here.
+      DB_PASSWORD: "sqlite-not-used"           # ← change if using MariaDB or PostgreSQL
+
+      # ── Database ─────────────────────────────────────────────────────────────
+      DB_CLIENT: "sqlite3"       # sqlite3 | mysql2 | pg
+      DB_PATH: "/app/data/budget.db"
+      # DB_HOST: ""              # MariaDB/PostgreSQL only
+      # DB_PORT: "3306"          # MariaDB: 3306 | PostgreSQL: 5432
+      # DB_NAME: "budget_app"    # MariaDB/PostgreSQL only
+      # DB_USER: "budget_user"   # MariaDB/PostgreSQL only
+
+      # ── Runtime ──────────────────────────────────────────────────────────────
+      NODE_ENV: "production"
+      APP_PORT: "3001"           # Express internal port — do not change
+      LOG_LEVEL: "info"
+      LOG_DIR: "/app/logs"
+      UPLOAD_DIR: "/app/uploads"
+      MAX_FILE_SIZE: "10485760"
+      ENCRYPTION_ALGORITHM: "aes-256-gcm"
+      JWT_EXPIRY: "15m"
+      JWT_REFRESH_EXPIRY: "30d"
+      SESSION_TIMEOUT: "3600"
+      MAX_LOGIN_ATTEMPTS: "5"
+      LOCKOUT_DURATION: "900"
+      BCRYPT_ROUNDS: "12"
+      RATE_LIMIT_WINDOW_MS: "900000"
+      RATE_LIMIT_MAX_REQUESTS: "100"
+      LOGIN_RATE_LIMIT_MAX: "5"
+      LOGIN_RATE_LIMIT_WINDOW_MS: "900000"
+      SIMPLEFIN_API_URL: "https://bridge.simplefin.org"
+      WEBAUTHN_RP_NAME: "Budget App"
+
+      # ── Push notifications (optional) ────────────────────────────────────────
+      # Generate VAPID keys with: npx web-push generate-vapid-keys
+      # VAPID_PUBLIC_KEY: ""
+      # VAPID_PRIVATE_KEY: ""
+      # VAPID_EMAIL: ""
