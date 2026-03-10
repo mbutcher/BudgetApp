@@ -1,4 +1,4 @@
-# BudgetApp — User Deployment Guide
+# BudgetApp — User Guide
 
 This guide walks you through installing BudgetApp on your home server and getting your household set up. No coding experience required.
 
@@ -9,215 +9,152 @@ This guide walks you through installing BudgetApp on your home server and gettin
 - A home server running **Unraid 6.12+** (or any Linux host with Docker Engine 24+)
 - **Git** installed on the server
 - A **domain name or local hostname** you can point at your server (e.g., `budget.lan` or `budget.yourdomain.com`)
-- An SSL certificate (free via Let's Encrypt, or self-signed for LAN-only use)
 
-> If you're on Unraid, the Community Applications plugin makes this straightforward. Docker and Git are available as Unraid community apps.
+> **SSL:** Passkeys and push notifications require HTTPS. Nginx Proxy Manager (free, available in Community Applications) handles SSL automatically — recommended.
 
 ---
 
-## Step 1 — Clone the Repository
+## Installation
 
-On your server, clone BudgetApp to a location that persists across reboots. On Unraid, `/mnt/user/repos/` is a good choice:
+Three methods are available. All produce the same running container.
+
+---
+
+### Method 1 — Setup Script (recommended)
+
+The simplest path. One script asks a few questions and handles everything.
+
+**1. Clone the repository:**
 
 ```bash
-git clone <repository-url> /mnt/user/repos/BudgetApp
+git clone https://github.com/mbutcher/BudgetApp /mnt/user/repos/BudgetApp
 cd /mnt/user/repos/BudgetApp
 ```
 
----
-
-## Step 2 — Generate Secrets
-
-BudgetApp uses strong randomly-generated secrets for database passwords, encryption keys, and JWT signing. Run this once:
+**2. Run the setup script:**
 
 ```bash
-./scripts/setup/generate-keys.sh production
+./scripts/setup/setup-prod.sh
 ```
 
-This creates all required secret files in `secrets/production/`. **Back these up immediately** to an encrypted location outside your server (e.g., a password manager or encrypted USB drive). If you lose the encryption key, all your financial data becomes unreadable.
+The script will ask for:
+- Your domain name (e.g. `budget.yourdomain.com`)
+- Whether you are using Nginx Proxy Manager
+- The host port BudgetApp should listen on (default `13911`)
+- Your database choice and credentials (if using MariaDB or PostgreSQL)
+
+It then generates your security keys, creates the necessary folders, and starts the app.
+
+> **Optional:** Pass answers directly to skip prompts:
+> ```bash
+> ./scripts/setup/setup-prod.sh --domain budget.yourdomain.com --port 13911
+> ```
+
+Skip ahead to [**Save Your Master Secret**](#save-your-master-secret).
 
 ---
 
-## Step 3 — Configure the Application
+### Method 2 — Docker Compose Manager (Unraid)
 
-Copy the example configuration file:
+For users who prefer to manage everything through the Unraid UI.
 
-```bash
-cp secrets/.env.example secrets/production/.env
-```
-
-Open `secrets/production/.env` and set the values marked below.
-
-### Required settings
-
-| Setting | What to put |
-|---------|------------|
-| `APP_URL` | The full URL you'll access the app at, e.g. `https://budget.yourdomain.com` |
-| `CORS_ORIGIN` | Same as `APP_URL` (no trailing slash) |
-| `WEBAUTHN_RP_ID` | Just the domain, e.g. `budget.yourdomain.com` or `budget.lan` |
-| `WEBAUTHN_ORIGIN` | Same as `APP_URL` |
-| `WEBAUTHN_RP_NAME` | A display name for passkey prompts, e.g. `Budget App` |
-
-### Database options
-
-BudgetApp supports three database backends. Choose one:
-
-#### Option A — SQLite (default, recommended for most users)
-
-No database server required. BudgetApp stores everything in a single file on your server. This is the easiest option and works well for households.
-
-Leave `DB_CLIENT` unset (or set it to `sqlite3`). The database file will be stored at `/app/data/budget.db` inside the container, which maps to `/mnt/user/appdata/budget-app/data/` on your server.
-
-```env
-# DB_CLIENT=sqlite3      ← this is the default; line can be omitted
-# DB_PATH=/app/data/budget.db
-```
-
-#### Option B — MariaDB (external)
-
-If you already run MariaDB on your Unraid server and prefer to keep your data there:
-
-1. Create a database and user in MariaDB:
-   ```sql
-   CREATE DATABASE IF NOT EXISTS budget_app
-     CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   CREATE USER 'budget_user'@'%' IDENTIFIED BY 'choose_a_strong_password';
-   GRANT ALL PRIVILEGES ON budget_app.* TO 'budget_user'@'%';
-   FLUSH PRIVILEGES;
-   ```
-2. Write the password to the secret file:
+1. Install **Docker Compose Manager** from Community Applications.
+2. Open Docker Compose Manager → **Add New Stack**. Name it `BudgetApp` and paste the contents of [`unraid/docker-compose.yml`](../../unraid/docker-compose.yml).
+3. In an Unraid Terminal, generate your security keys:
    ```bash
-   printf '%s' 'choose_a_strong_password' > secrets/production/db_password.txt
-   chmod 600 secrets/production/db_password.txt
+   git clone https://github.com/mbutcher/BudgetApp /mnt/user/repos/BudgetApp
+   cd /mnt/user/repos/BudgetApp
+   ./scripts/setup/generate-keys.sh production
    ```
-3. In `secrets/production/.env`, set:
-   ```env
-   DB_CLIENT=mysql2
-   DB_HOST=<your-mariadb-host-or-ip>
-   DB_PORT=3306
-   DB_NAME=budget_app
-   DB_USER=budget_user
-   ```
+4. Open `secrets/production/` and copy the contents of each `.txt` file into the matching variable in the Docker Compose Manager editor:
+   - `jwt_secret.txt` → `JWT_SECRET`
+   - `encryption_key.txt` → `ENCRYPTION_KEY`
+   - `password_pepper.txt` → `PASSWORD_PEPPER`
+5. Fill in your domain in `APP_URL`, `CORS_ORIGIN`, `WEBAUTHN_ORIGIN`, and `WEBAUTHN_RP_ID`.
+6. Click **Compose Up**.
 
-#### Option C — PostgreSQL (external)
-
-If you prefer PostgreSQL, the setup is the same as MariaDB above but with a different client and port:
-
-1. Create a database and user in PostgreSQL:
-   ```sql
-   CREATE DATABASE budget_app;
-   CREATE USER budget_user WITH PASSWORD 'choose_a_strong_password';
-   GRANT ALL PRIVILEGES ON DATABASE budget_app TO budget_user;
-   ```
-2. Write the password to the secret file (same as MariaDB step 2 above).
-3. In `secrets/production/.env`, set:
-   ```env
-   DB_CLIENT=pg
-   DB_HOST=<your-postgres-host-or-ip>
-   DB_PORT=5432
-   DB_NAME=budget_app
-   DB_USER=budget_user
-   ```
+> **Save your master secret.** Copy `secrets/production/master_secret.txt` to a password manager. It is the only way to recover your data if you move to a new server.
 
 ---
 
-## Step 4 — Set Up Data Directories
+### Method 3 — Community Applications (coming soon)
 
-Create the directories where BudgetApp will store its data:
-
-```bash
-mkdir -p /mnt/user/appdata/budget-app/data       # SQLite database file (default)
-mkdir -p /mnt/user/appdata/budget-app/logs
-mkdir -p /mnt/user/appdata/budget-app/uploads
-mkdir -p /mnt/user/appdata/budget-app/ssl
-```
-
-> If you chose MariaDB or PostgreSQL (Options B/C above), the `/mnt/user/appdata/budget-app/data` directory is not used by BudgetApp, but it won't hurt to create it.
+A one-click template will be available in Community Applications once a pre-built Docker image is published. The template is ready; check the GitHub repository for availability.
 
 ---
 
-## Step 5 — SSL Certificate
+## Save Your Master Secret
 
-Place your SSL certificate and private key in `/mnt/user/appdata/budget-app/ssl/`:
+The first time you open BudgetApp in a browser, you will see a screen asking you to save your **Master Secret**.
 
-```
-ssl/
-  cert.pem    ← Full chain certificate (server cert + intermediates)
-  key.pem     ← Private key
-```
+**This is the single most important step.** Your Master Secret is a long string of letters and numbers that protects all of your data. If you ever need to move BudgetApp to a new server, this is what you'll need to restore it.
 
-### Option A — Nginx Proxy Manager (recommended for Unraid)
+1. Click **Copy** to copy the Master Secret to your clipboard.
+2. Paste it into a password manager (1Password, Bitwarden, etc.) or write it down and store it somewhere safe — **off the server**.
+3. Check the confirmation box and click **Continue** to proceed to account creation.
 
-If you already use **Nginx Proxy Manager**, you can skip placing certificates manually:
-
-1. Remove the `nginx` service from `docker/docker-compose.prod.yml` (or leave it and configure NPM to proxy to port 443).
-2. In NPM, create a Proxy Host pointing to `budget_backend:3001` (API) and `budget_frontend:80` (frontend).
-3. Use NPM's built-in Let's Encrypt integration for automatic certificate provisioning and renewal.
-
-### Option B — Self-Signed (LAN only)
-
-For local network access only, generate a self-signed certificate:
-
-```bash
-openssl req -x509 -nodes -days 365 -newkey rsa:4096 \
-  -keyout /mnt/user/appdata/budget-app/ssl/key.pem \
-  -out /mnt/user/appdata/budget-app/ssl/cert.pem \
-  -subj "/CN=budget.lan"
-```
-
-Your browser will show a security warning — you can add a permanent exception for your LAN hostname.
+Once you dismiss this screen, the secret will never be shown again.
 
 ---
 
-## Step 6 — Start BudgetApp
+## Set Up Nginx Proxy Manager
 
-From the repository directory:
+If you want HTTPS and/or access from outside your home network, configure a Proxy Host in Nginx Proxy Manager:
 
-```bash
-docker compose -f docker/docker-compose.prod.yml up -d --build
-```
+1. Open NPM → **Proxy Hosts → Add Proxy Host**.
+2. Fill in the **Details** tab:
+   - **Domain Names:** `budget.yourdomain.com`
+   - **Forward Hostname / IP:** the IP address of your Unraid server
+   - **Forward Port:** `13911` (or whichever port you chose)
+   - Turn on **Websockets Support**
+3. On the **SSL** tab → **Request a new SSL Certificate** → turn on **Force SSL**.
+4. On the **Advanced** tab, paste:
+   ```nginx
+   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+   proxy_set_header X-Forwarded-Proto $scheme;
+   proxy_set_header X-Real-IP $remote_addr;
+   ```
+5. Click **Save**.
 
-This builds and starts BudgetApp. The first run takes a few minutes. Check that everything is healthy:
-
-```bash
-docker compose -f docker/docker-compose.prod.yml ps
-```
-
-You should see the `budget_app` container with `Up (healthy)` status. The backend automatically runs database migrations on first start — check the logs if anything looks wrong:
-
-```bash
-docker logs budget_app | tail -30
-```
+BudgetApp is now accessible at `https://budget.yourdomain.com`.
 
 ---
 
-## Step 7 — First Login
+## First Login
 
-Open `https://your-domain` in a browser. You'll see the registration page.
+Open the app in a browser. You'll see the registration page.
 
-> **Registration is only available once.** After the first user registers and creates a household, the registration page is locked. Additional users are added through the Household settings inside the app.
+> **Registration is only available once.** After the first user registers, the registration page is locked. Additional users are added through Household settings inside the app.
 
 1. Create your account with a strong password.
-2. Optionally set up **TOTP 2FA** or a **passkey** immediately (Settings → Security).
-3. Create your **household** — this is the shared space for all members' accounts and data.
+2. Set up **TOTP 2FA** or a **passkey** immediately (Settings → Security) — recommended.
+3. Create your **household** — the shared space for all members' accounts and data.
 
 ---
 
-## Step 8 — Set Up Your Finances
+## Set Up Your Finances
 
 Once logged in:
 
 1. **Add your accounts** (Accounts page) — bank accounts, credit cards, loans, mortgages. Use actual current balances.
 2. **Set up categories** — a default hierarchy is pre-loaded; customize as needed.
-3. **Add budget lines** (Budget page) — define your recurring income (paycheck) and expenses (rent, utilities, subscriptions). Mark your main income line as the **pay period anchor** — this drives the pay-period view throughout the app.
-4. **Connect SimpleFIN** (optional, Settings → Integrations) — automated import from your bank. You'll need a [SimpleFIN Bridge](https://bridge.simplefin.org/) account (free tier available).
+3. **Add budget lines** (Budget page) — define your recurring income and expenses. Mark your main income line as the **pay period anchor** — this drives the pay-period view throughout the app.
+4. **Connect SimpleFIN** (optional, Settings → Integrations) — automated import from your bank. Requires a [SimpleFIN Bridge](https://bridge.simplefin.org/) account (free tier available).
 5. **Enter transactions** — manually, or review/accept SimpleFIN imports via the Imports page.
 
 ---
 
-## Keeping Up to Date
+## Adding Household Members
 
-When a new version of BudgetApp is available:
+After initial setup, additional users are added by the household owner through the app — not through the registration page (which is locked after first use).
+
+1. Go to **Settings → Household**.
+2. Click **Add Member** and set their display name and password.
+3. They log in with those credentials and can be given access to specific accounts via **Share** on each account card.
+
+---
+
+## Keeping Up to Date
 
 ```bash
 cd /mnt/user/repos/BudgetApp
@@ -226,36 +163,28 @@ docker compose -f docker/docker-compose.prod.yml down
 docker compose -f docker/docker-compose.prod.yml up -d --build
 ```
 
-The backend automatically applies any new database migrations on startup before accepting traffic.
+Database updates are applied automatically when the app starts back up.
 
 ---
 
 ## Backups
 
-Backing up BudgetApp means backing up two things:
+Back up two things regularly.
 
-### 1. Your Secrets (most critical)
+### 1. Your Master Secret (most critical)
 
-The files in `secrets/production/` — especially `encryption_key.txt` — are required to read your data. Back these up to **encrypted storage outside your server**. A password manager works well.
+Copy `secrets/production/master_secret.txt` to **encrypted storage outside your server** (password manager, encrypted USB drive). Without it you cannot recover your data after a hardware failure.
 
 ### 2. Your Database
 
-How you back up the database depends on which backend you chose.
-
-#### SQLite (default)
-
-The database is a single file at `/mnt/user/appdata/budget-app/data/budget.db`. Back it up with Unraid's built-in **CA Backup / Restore** plugin, or copy it manually:
+**SQLite (default):** The database is a single file. Back it up with the **CA Backup / Restore** plugin, or copy it manually:
 
 ```bash
 cp /mnt/user/appdata/budget-app/data/budget.db \
    /mnt/user/backups/budget_$(date +%Y%m%d).db
 ```
 
-> Stop the app first for a clean copy, or use the SQLite online-backup API (the app does not do this automatically today).
-
-#### MariaDB (external)
-
-Add this to Unraid's **User Scripts** plugin to run nightly:
+**MariaDB:** Add a nightly User Scripts entry:
 
 ```bash
 docker exec <your-mariadb-container> \
@@ -264,7 +193,7 @@ docker exec <your-mariadb-container> \
   | gzip > /mnt/user/backups/budget_$(date +%Y%m%d).sql.gz
 ```
 
-#### PostgreSQL (external)
+**PostgreSQL:** Similarly:
 
 ```bash
 docker exec <your-postgres-container> \
@@ -272,69 +201,40 @@ docker exec <your-postgres-container> \
   | gzip > /mnt/user/backups/budget_$(date +%Y%m%d).sql.gz
 ```
 
-Keep at least 7 days of backups for whichever method you use.
+Keep at least 7 days of backups.
 
 ---
 
 ## Troubleshooting
 
-### App won't load
+### The app won't start
 
 ```bash
-docker logs budget_app | tail -50
-```
-
-### Container unhealthy / not starting
-
-```bash
-docker logs budget_app | tail -50
+docker compose -f docker/docker-compose.prod.yml logs
 ```
 
 Common causes:
-- **Missing secret files** — verify all `secrets/production/*.txt` files exist.
-- **SQLite permission error** — verify `/mnt/user/appdata/budget-app/data/` exists and is writable by Docker.
-- **Cannot connect to external database** — if using MariaDB or PostgreSQL, verify the host, port, and credentials in `secrets/production/.env`, and that the database server is running and reachable from the Docker container.
-- **Migration failure** — look for SQL errors in the log.
 
-### CORS or passkey errors
+- **Missing secret files** — run `./scripts/setup/setup-prod.sh` again from the repo folder.
+- **SQLite permission error** — verify `/mnt/user/appdata/budget-app/data/` exists and is writable.
+- **Can't connect to external database** — verify the host, port, and credentials in `secrets/production/.env`. Make sure the database container is running and the `budget_app` database exists.
+- **Port already in use** — edit `APP_PORT` in `docker/.env` to a free port, then restart. Or re-run `./scripts/setup/setup-prod.sh --port <new-port>`.
 
-Verify that `APP_URL`, `CORS_ORIGIN`, `WEBAUTHN_ORIGIN`, and `WEBAUTHN_RP_ID` in `secrets/production/.env` all match the hostname you're actually using to access the app.
+### Passkey or WebAuthn errors
 
-### Database access (advanced)
+Verify that your domain in Nginx Proxy Manager exactly matches what you entered during setup. Mismatched hostnames break passkeys.
 
-**SQLite** — open the database file directly from the host:
-
-```bash
-sqlite3 /mnt/user/appdata/budget-app/data/budget.db
-```
-
-**MariaDB** — connect via your MariaDB container:
+### Check whether the app is running
 
 ```bash
-docker exec -it <your-mariadb-container> \
-  mysql -u budget_user -p budget_app
+docker compose -f docker/docker-compose.prod.yml ps
 ```
 
-**PostgreSQL** — connect via your PostgreSQL container:
-
-```bash
-docker exec -it <your-postgres-container> \
-  psql -U budget_user -d budget_app
-```
-
----
-
-## Adding Household Members
-
-After initial setup, additional users are added by the household owner through the app — not through a separate registration page (which is locked after first use).
-
-1. Go to **Settings → Household**.
-2. Click **Add Member** and set their display name and password.
-3. They log in with those credentials and can be given access to specific accounts via **Share** on each account card.
+The `budget_app` container should show **Up (healthy)**.
 
 ---
 
 ## Further Reading
 
-- [Production Deployment Reference](deployment.md) — full technical reference for all deployment options, SSL variants, backup/restore commands, and advanced troubleshooting
-- [Secrets Management](../../secrets/README.md) — key rotation, permissions, and secret file details
+- [Installation Guide](deployment.md) — full technical reference: all deployment options, backup/restore commands, disaster recovery, advanced troubleshooting
+- [Unraid-specific notes](../../unraid/README.md) — Community Applications template, Docker Compose Manager details, NPM setup
